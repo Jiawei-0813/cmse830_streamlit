@@ -18,6 +18,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 
+
 st.title('London Bike-Sharing Trends')
 # st.subheader('CMSE 830 Midterm Project')
 
@@ -101,8 +102,9 @@ st.sidebar.title('Navigation')
 page = st.sidebar.radio('Go To', 
                         ['Overview',
                          'Data Sources', 
-                         'Data Exploration', 
-                         'Data Visualization'])
+                         'Data Inspection', 
+                         'Data Visualization'
+                         ])
 
 # Fun Fact
 total_trips = bike_0.shape[0]  # Total number of trips
@@ -274,9 +276,9 @@ elif page == 'Data Sources':
             unsafe_allow_html=True
         )
         
-# --- Data Exploration ---
-if page == 'Data Exploration':
-    st.header('Data Exploration')
+# --- Data Inspection ---
+if page == 'Data Inspection':
+    st.header('Data Inspection')
     # Create tabs for datasets
     bike_tab, weather_tab, combined_tab = st.tabs(["🚴 Bike Dataset", "🌤️ Weather Dataset", "🔍 Combined Insights"])
 
@@ -848,7 +850,8 @@ elif page == 'Data Visualization':
             "What correlations exist between variables?",
             "How do bike-sharing trends change over time?",
             "What impact does weather have on bike-sharing?",
-            "Which stations are more popular?"
+            "Which stations are more popular?",
+            "What do we know by now?"
             ""
         ]
     )
@@ -1115,12 +1118,15 @@ elif page == 'Data Visualization':
     if eda_option == "What impact does weather have on bike-sharing?":
 
         weather_option = st.selectbox ("Select one to visualize:", ["Weather Conditions", "Meteorological Factors"])
-        
-        st.subheader("Impact of Weather Conditions on Bike-Sharing")
+
         if weather_option == "Weather Conditions":   
 
-        
+            st.subheader("Impact of Weather Conditions on Bike-Sharing")
+
             weather_counts = combined.groupby('Weather Description').size().reset_index(name='Number of Bike-Sharing')
+            total_bike_sharing = weather_counts['Number of Bike-Sharing'].sum()
+            weather_counts['Percentage'] = (weather_counts['Number of Bike-Sharing'] / total_bike_sharing) * 100
+
             # Create a bar plot for the number of bike-sharing trips by weather condition
             fig_weather_bar = px.bar(
                 weather_counts,
@@ -1128,83 +1134,126 @@ elif page == 'Data Visualization':
                 y='Number of Bike-Sharing',
                 color='Number of Bike-Sharing',
                 color_continuous_scale='Viridis',
+                title="Bike-Sharing Distribution by Weather Condition",
+                labels={'Number of Bike-Sharing': 'Bike-Sharing Trip Count'}  # Update the color legend
             )
 
             # Format y-axis numbers as x,xxx
             fig_weather_bar.update_layout(yaxis=dict(tickformat=','))
 
-            # Annotate bars with counts
+            # Annotate bars with counts and percentages
             fig_weather_bar.update_traces(
-                texttemplate='%{y:,}',  # Format the text with commas
-                textposition='outside'  # Position the text outside the bars
+                texttemplate='%{y:,} (%{customdata[0]:.2f}%)',  # Format the text with commas and percentages
+                textposition='outside',  # Position the text outside the bars
+                customdata=weather_counts[['Percentage']].values  # Add percentage data for annotation
             )
 
             # Hide the legend and y-axis
             fig_weather_bar.update_layout(showlegend=False, yaxis=dict(visible=False))
 
             # Adjust the height of the plot
-            fig_weather_bar.update_layout(height=600))
+            fig_weather_bar.update_layout(height=500)
 
             st.plotly_chart(fig_weather_bar)
 
             st.markdown("""
             **Observation:**
             - **Partly Cloudy** and **Clear Sky** weather conditions have the highest number of bike-sharing trips.
-            - Severe weather conditions like **Thunderstorms** and **Heavy Snow** have the lowest number of bike-sharing trips.
-            """)
-
+            - Wet weather conditions, such as **Heavy Drizzle** and **Moderate Rain**, see the lowest number of bike-sharing trips.
+                        """)
+            
             st.divider()
 
-            # Heatmap - Average Bike-Sharing by Hour and Weather Condition
-            # Group and unstack to create a 2D matrix for average bike-sharing by hour and weather condition
-            avg_hour_weather = combined.groupby(['Hour_of_Day', 'Weather Description']).size().unstack(fill_value=0)
-
-            fig_avg_hour_weather = px.imshow(
-                avg_hour_weather,
-                aspect="auto",
-                labels=dict(x="Hour of Day", y="Weather Condition", color="Average Bike-Sharing"),
-                title="Hourly Bike-Sharing Patterns by Weather Condition",
-                color_continuous_scale='thermal',  
-                text_auto='.0f'  # Display annotations with 0 decimal places
+            # Add radio buttons for heatmap selection
+            weather_condition_option = st.radio(
+                "Select a heatmap to display:",
+                ["Hourly Bike-Sharing by Weather Condition", "Bike-Sharing by Day of Week and Weather Condition"]
             )
-            fig_avg_hour_weather.update_layout(
-                height=800,  
-                width=1200   
-            )
-            st.plotly_chart(fig_avg_hour_weather)
 
-            st.divider()
+            if weather_condition_option == "Bike-Sharing Trips per Hour by Weather Condition":
+                # Group and unstack to create a 2D matrix for average bike-sharing by hour and weather condition
+                avg_hour_weather = combined.groupby(['Hour_of_Day', 'Weather Description']).size().unstack(fill_value=0)
 
-            # Heatmap - Average Bike-Sharing by Day of Week and Weather Condition
-            st.subheader("Average Bike-Sharing by Day and Weather Condition")
+                fig_avg_hour_weather = px.imshow(
+                    avg_hour_weather,
+                    aspect="auto",
+                    labels=dict(y="Hour of Day", x="Weather Condition", color="Bike-Sharing Trip Count"),
+                    title="Bike-Sharing Trips per Hour by Weather Condition",
+                    color_continuous_scale='Blues',  
+                    text_auto='.0f'  # Display annotations with 0 decimal places
+                )
+                fig_avg_hour_weather.update_layout(
+                    height=800,  
+                    width=1200,
+                    xaxis_title=None, # Remove x-axis label
+                    yaxis_title='Hour of Day',  
+                    yaxis=dict(tickmode='linear', tick0=0, dtick=1)  # Ensure all y-axis labels are shown from 0 to 23
+                )
 
-            # Group and unstack to create a 2D matrix for average bike-sharing by day and weather condition
-            avg_day_weather = combined.groupby(['Weather Description', 'Day_of_Week']).size().unstack(fill_value=0)
+                st.plotly_chart(fig_avg_hour_weather)
 
-            # Heatmap for average bike-sharing by day and weather condition
-            fig_avg_day_weather = px.imshow(
-                avg_day_weather,
-                aspect="auto",
-                labels=dict(y="Weather Condition", x="Day of Week", color="Average Bike-Sharing"),
-                title="Average Bike-Sharing by Day and Weather Condition",
-                color_continuous_scale='Blues',
-                text_auto='.0f'
-            )
-            fig_avg_day_weather.update_layout(
-                xaxis_title='Day of Week', 
-                yaxis_title='Weather Condition'
-            )
-            st.plotly_chart(fig_avg_day_weather)
+                st.markdown("""
+                            **Observation:** This heatmap visualizes the average number of bike-sharing trips across different hours of the day, broken down by various weather conditions.
+                            - **Clear Sky** and **Partly Cloudy** conditions consistently show high bike-sharing activity, particularly during the evening hours (5 PM - 7 PM).
+                            - **Wet Weather**, such as Drizzle, Heavy Drizzle, and Moderate Rain conditions, exhibit significantly lower bike-sharing activity throughout the day.
+                            - The highest activity occurs around 6 PM, especially under **Clear Sky** weather conditions.
+                            """)
 
-            st.divider()
+            if weather_condition_option == "Bike-Sharing by Day of Week and Weather Condition":
+
+                # Group and unstack to create a 2D matrix for average bike-sharing by day and weather condition
+                avg_day_weather = combined.groupby(['Weather Description', 'Day_of_Week']).size().unstack(fill_value=0)
+
+                # Define the correct order for days of the week
+                day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+                # Ensure 'Day_of_Week' is treated as a categorical variable with this order
+                avg_day_weather.columns = pd.Categorical(avg_day_weather.columns, categories=range(1, 8), ordered=True)
+                avg_day_weather.columns = [day_order[day - 1] for day in avg_day_weather.columns]
+
+                # Heatmap for average bike-sharing by day and weather condition
+                fig_avg_day_weather = px.imshow(
+                    avg_day_weather,
+                    aspect="auto",
+                    labels=dict(y="Weather Condition", x="Day of Week", color="Bike-Sharing Trip Count"),
+                    title="Bike-Sharing by Day of Week and Weather Condition",
+                    color_continuous_scale='Blues',
+                    text_auto='.0f'
+                )
+                fig_avg_day_weather.update_layout(
+                    xaxis_title=None, 
+                    yaxis_title=None
+                )
+                st.plotly_chart(fig_avg_day_weather)
+
+                st.markdown("""
+                             **Observation:** The heatmap visualizes the average number of bike-sharing trips on each day of the week, categorized by various weather conditions.
+                            - **Wednesday** and **Thursday** show the highest bike-sharing activity, especially under **Partly Cloudy** and **Clear Sky** conditions.
+                            - **Overcast** and **Cloudy** conditions still see moderate activity, particularly in the middle of the week.
+                            - **Heavy Drizzle** and **Moderate Rain** conditions result in minimal bike-sharing, with nearly no trips observed on certain days.
+                            """)
 
         if weather_option == "Meteorological Factors":
 
-         # Violin Plot - Distribution of Bike-Sharing by Weather Variables
-            st.subheader("Distribution of Bike-Sharing by Key Meteorological Factors")
-            
-            # Combine weather columns into long format using melt
+            st.subheader("Impact of Key Meterological Factors on Bike-Sharing")
+
+            # Violin Plot - Distribution of Bike-Sharing by Weather Variables
+            # Reshape the weather columns into long format
+            weather_cols = ['real_temperature_C', 'humidity_percentage', 'feels_like_temperature_C', 'wind_speed_10m']
+
+            # Convert the wide data to long format
             long_format = pd.melt(combined, id_vars=[], value_vars=weather_cols, var_name='Weather_Variable', value_name='Value')
+
+            # Add meaningful labels for each weather variable
+            weather_variable_labels = {
+                'real_temperature_C': 'Temperature (°C)',
+                'humidity_percentage': 'Humidity (%)',
+                'feels_like_temperature_C': 'Feels Like (°C)',
+                'wind_speed_10m': 'Wind Speed (m/s)'
+            }
+
+            # Map the weather variables to the labels
+            long_format['Weather_Variable'] = long_format['Weather_Variable'].map(weather_variable_labels)
 
             # Violin plot for weather variables
             fig_weather_facet = px.violin(
@@ -1215,100 +1264,137 @@ elif page == 'Data Visualization':
                 color='Weather_Variable',
                 color_discrete_sequence=px.colors.qualitative.Vivid
             )
-
+            # Update layout
             fig_weather_facet.update_layout(
-                title="Distribution of Bike-Sharing by Temperature and Humidity",
-                xaxis_title="Weather Variable",
-                yaxis_title="Value"
+                title="Bike-Sharing Distribution by Temperature, Humidity, Feels Like Temperature, and Wind Speed",
+                xaxis_title=None,  # Remove x-axis title
+                yaxis_title="Value (Normalized)",  
+                yaxis_range=[0, 1],  # Normalize the y-axis range
+                showlegend=False  # Hide the legend
             )
+
+            # Update hover template to show 4 decimal places
+            fig_weather_facet.update_traces(hovertemplate='%{y:.4f}')
 
             st.plotly_chart(fig_weather_facet)
 
-        # Linear Regression - Bike-Sharing vs. Weather Variables
-        st.subheader("Linear Regression Analysis: Impact of Meteorological Factors on Bike-Sharing")
+            st.markdown("""
+                        **Observation:** The violin plot shows the distribution of bike-sharing activity across different weather variables.
+                        - Bike-sharing tends to occur more frequently in **moderate weather conditions**,
+                        including mild temperatures, moderate humidity, and calm winds. 
+                        - Extreme conditions, such as high humidity or strong winds, see less activity.
+                        """)
 
-        # Prepare the dataset for regression
-        bike_weather_data = combined[['real_temperature_C', 'humidity_percentage', 'feels_like_temperature_C', 'wind_speed_10m']]
+            st.divider()
 
-        # Add a column for Bike-Sharing counts (each row = 1 bike-sharing event)
-        bike_weather_data['Bike-Sharing Count'] = 1
+            # Linear Regression - Bike-Sharing vs. Weather Variables
+            st.subheader("Impact of Weather on Bike-Sharing: Linear Regression Analysis")
 
-        # Group by weather variables
-        bike_weather_grouped = bike_weather_data.groupby(['real_temperature_C', 'humidity_percentage', 'feels_like_temperature_C', 'wind_speed_10m']).size().reset_index(name='Bike-Sharing Count')
+            # Prepare the dataset for regression
+            bike_weather_data = combined[['real_temperature_C', 'humidity_percentage', 'feels_like_temperature_C', 'wind_speed_10m']]
 
-        # Select variables for regression
-        variables = st.multiselect(
-            "Select variables for linear regression:",
-            options=['real_temperature_C', 'humidity_percentage', 'feels_like_temperature_C', 'wind_speed_10m'],
-            default=['real_temperature_C']
-        )
+            # Add a column for Bike-Sharing counts (each row = 1 bike-sharing event)
+            bike_weather_data['Bike-Sharing Count'] = 1
 
-        if variables:
-            # Prepare data for regression
-            X = bike_weather_grouped[variables]  # Independent variables
-            y = bike_weather_grouped['Bike-Sharing Count']  # Dependent variable: Bike-Sharing Count
+            # Group by weather variables
+            bike_weather_grouped = bike_weather_data.groupby(['real_temperature_C', 'humidity_percentage', 'feels_like_temperature_C', 'wind_speed_10m']).size().reset_index(name='Bike-Sharing Count')
 
-            # Split into training and testing sets
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-
-            # Create and fit the linear regression model
-            model = LinearRegression()
-            model.fit(X_train, y_train)
-
-            # Predict on the test set
-            y_pred = model.predict(X_test)
-
-            # Evaluate the model (R-squared, RMSE)
-            r2 = r2_score(y_test, y_pred)
-            rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-
-            st.write(f"R-squared: {r2:.2f}")
-            st.write(f"RMSE: {rmse:.2f}")
-
-            # Plot the regression line and the data using Plotly
-            fig_regression = px.scatter(
-            x=X_test[variables[0]], 
-            y=y_test, 
-            labels={'x': variables[0], 'y': 'Count'},
-            title=f'Linear Regression: Bike-Sharing Count vs. {variables[0]}'
+            # Select variable for regression
+            selected_variable = st.selectbox(
+                "Select a variable for linear regression:",
+                options=['real_temperature_C', 'humidity_percentage', 'feels_like_temperature_C', 'wind_speed_10m']
             )
 
-            # Add the regression line
-            fig_regression.add_trace(
-            go.Scatter(
-            x=X_test[variables[0]], 
-            y=y_pred, 
-            mode='lines',
-            line=dict(color='red')
-            )
-            )
+            if selected_variable:
+                # Prepare data for regression
+                X = bike_weather_grouped[[selected_variable]]  
+                y = bike_weather_grouped['Bike-Sharing Count']  # Dependent variable: Bike-Sharing Count
 
-            # Add R-squared and RMSE to the plot
-            fig_regression.add_annotation(
-            xref="paper", yref="paper",
-            x=0.05, y=0.95,
-            text=f"R-squared: {r2:.2f}<br>RMSE: {rmse:.2f}",
-            showarrow=False,
-            font=dict(size=12, color="black"),
-            align="left",
-            bordercolor="black",
-            borderwidth=1
-            )
+                # Split into training and testing sets
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-            # Update layout
-            fig_regression.update_layout(
-            xaxis_title=variables[0],
-            yaxis_title='Bike-Sharing Count',
-            showlegend=False  # Hide the legend
-            )
+                # Create and fit the linear regression model
+                model = LinearRegression()
+                model.fit(X_train, y_train)
 
-            st.plotly_chart(fig_regression)
+                # Predict on the test set
+                y_pred = model.predict(X_test)
 
-        st.markdown("""
-        **Conclusion:**
-        - The linear regression analysis shows a positive relationship between temperature and bike-sharing counts.
-        - Higher temperatures tend to correlate with more bike-sharing trips, but other weather factors like humidity also need to be considered for a complete picture.
-        """)
+                # Evaluate the model (R-squared, RMSE)
+                r2 = r2_score(y_test, y_pred)
+                rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+
+                # Get the coefficients for the regression equation
+                slope = model.coef_[0]
+                intercept = model.intercept_
+
+                # Plot the regression line and the data using Plotly
+                fig_regression = px.scatter(
+                    x=X_test[selected_variable], 
+                    y=y_test, 
+                    labels={'x': weather_variable_labels[selected_variable], 'y': 'Count'},
+                    title=f'Bike-Sharing vs. {weather_variable_labels[selected_variable]} (Linear Regression)',
+                    color_discrete_sequence=['#1f77b4']  # Better color for scatter points
+                )
+
+                # Add the regression line
+                fig_regression.add_trace(
+                    go.Scatter(
+                        x=X_test[selected_variable], 
+                        y=y_pred, 
+                        mode='lines',
+                        line=dict(color='#ff7f0e'),  # Better color for regression line
+                        name='Regression Line'
+                    )
+                )
+
+                # Update layout
+                fig_regression.update_layout(
+                    xaxis_title=weather_variable_labels[selected_variable],
+                    yaxis_title='Count',
+                    showlegend=False
+                )
+
+                # Add R-squared and RMSE to the plot in separate locations
+                fig_regression.add_annotation(
+                    xref="paper", yref="paper",
+                    x=0.05, y=0.95,
+                    text=f"R-squared: {r2:.2f}<br>RMSE: {rmse:.2f}",
+                    showarrow=False,
+                    font=dict(size=12, color="black"),
+                    align="left",
+                    bordercolor="black",
+                    borderwidth=1,
+                    borderpad=4,
+                    bgcolor="#ffebcd",  # Changed background color for annotation
+                    opacity=0.8
+                )
+
+                # Add annotation for the regression equation 
+                fig_regression.add_annotation(
+                    x=X_test[selected_variable].mean() + (X_test[selected_variable].max() - X_test[selected_variable].min()) * 0.3,  # Adjust x position to the right
+                    y=y_pred.mean() + (y_pred.max() - y_pred.min()) * 0.1,  # Adjust y position to be above the line
+                    text=f'y = {slope:.2f}x + {intercept:.2f}',
+                    showarrow=False,
+                    font=dict(size=12, color="#ff7f0e"),  # Better color for annotation text
+                    align="center",
+                    bordercolor="#ff7f0e",
+                    borderwidth=1,
+                    borderpad=4,
+                    bgcolor="#fff3e0",  # Better background color for annotation
+                    opacity=0.8
+                )
+
+                st.plotly_chart(fig_regression)
+
+            with st.popover("Conclusion"):
+                st.markdown("""
+                            **Observation:** The linear regression analysis shows the relationship between bike-sharing and a selected meteorological factor.
+                            - Temperature and Feels Like Temperature have a positive, though weak, relationship with bike-sharing, indicating that higher temperatures lead to more bike-sharing trips.
+                            - Humidity appears to have a negative relationship with bike-sharing, with fewer trips at higher humidity levels.
+                            - Wind speed seems to have little to no noticeable effect on the number of trips.
+                            """)
+               
 
     if eda_option == "Which stations are more popular?":
        
@@ -1318,23 +1404,19 @@ elif page == 'Data Visualization':
         # Determine unique stations
         unique_stations = combined[station_option].nunique()
 
-        # Slider for selecting the number of top stations to display
-        top_n = st.slider("Select the number of top stations to display:", min_value=1, max_value=unique_stations, value=10, step=1)
+        # Slider for selecting the number of busiest stations to display
+        top_n = st.slider(f"Select the number of busiest {station_option.lower()}s to display:", min_value=1, max_value=unique_stations, value=10, step=1)
 
-        # Identify the top stations based on the selected station type
-        if station_option == "Start station":
-            top_stations = combined['Start station'].value_counts().head(top_n).index
-            top_station_data = combined[combined['Start station'].isin(top_stations)]
-        else:
-            top_stations = combined['End station'].value_counts().head(top_n).index
-            top_station_data = combined[combined['End station'].isin(top_stations)]
+        # Identify the busiest stations based on the selected station type
+        top_stations = combined[station_option].value_counts().head(top_n).index
+        top_station_data = combined[combined[station_option].isin(top_stations)]
 
-        # Create a bar plot for the top N stations
+        # Create a bar plot for the busiest stations
         fig_station = px.bar(
             top_station_data.groupby(station_option).size().reset_index(name='Number of Bike-Sharing').sort_values(by='Number of Bike-Sharing', ascending=False),
             x='Number of Bike-Sharing',  # Count on the x-axis
             y=station_option,             # Station names on the y-axis
-            title=f"Top {top_n} {station_option}s",
+            title=f"The Busiest {top_n} {station_option}s",
             labels={station_option: f"{station_option} Name", "Number of Bike-Sharing": "Count"},
             color=station_option          # Color by station name
         )
@@ -1348,116 +1430,126 @@ elif page == 'Data Visualization':
         # Display the plot in Streamlit
         st.plotly_chart(fig_station)
 
-        # Calculate the percentage of trips for the top stations
+        # Calculate the percentage of trips for the busiest stations
         total_trips = combined.shape[0]
         top_station_trips = top_station_data.shape[0]
         percentage = (top_station_trips / total_trips) * 100
 
-        st.write(f"These busiest {top_n} {station_option.lower()}s represent {percentage:.2f}% of the total bike-sharing trips.")
+        # Combine the explanation of the plot with the percentage calculation
+        st.markdown(f"""
+        This plot shows the **Number of Bike-Sharing Trips** (x-axis) for the **Busiest {top_n} {station_option.lower()}s** (y-axis).
+        - The x-axis represents the total count of bike-sharing trips for each station.
+        - The y-axis lists the station names.
+        - Message: These busiest {station_option.lower()}s represent **{percentage:.2f}%** of the total bike-sharing trips.
+        """)
 
-        #if st.button("Show Busiest Stations"):
-        #    st.write(top_station_data.head())
+        st.divider()
 
-        st.subheader(f"The busiest {top_n} {station_option}s: Detailed Analysis")
+        # Detailed Analysis of the Busiest Stations
+        st.subheader(f"The Busiest {top_n} {station_option}s: Detailed Analysis")
 
         # Create a bar plot for daily distribution
-        # Filter data based on selected station type and top stations
-        filtered_data = top_station_data[top_station_data[station_option].isin(top_stations)]
-
-        daily_counts = filtered_data.groupby(['Day_of_Week_Name', station_option]).size().reset_index(name='Number of Bike-Sharing')
+        daily_counts = top_station_data.groupby(['Day_of_Week_Name', station_option]).size().reset_index(name='Number of Bike-Sharing')
         fig_daily = px.bar(
             daily_counts,
             x='Day_of_Week_Name',
             y='Number of Bike-Sharing',
             color=station_option,
-            title=f"Daily Distribution of Bike-Sharing for Top {top_n} {station_option}s",
-            labels={"Day_of_Week_Name": "Day of Week", "Number of Bike-Sharing": "Count"},
+            title=f"Daily Distribution of Bike-Sharing for the Busiest {top_n} {station_option}s",
             barmode='group',
-            category_orders={"Day_of_Week_Name": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]}  # Ensure correct order
+            category_orders={"Day_of_Week_Name": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},  # Ensure correct order
+            color_discrete_sequence=px.colors.qualitative.Pastel
         )
-        fig_daily.update_layout(dragmode='zoom')  # Allow zooming
+        fig_daily.update_layout(
+            dragmode='zoom', 
+            legend=dict(orientation='v', yanchor='top', y=1, xanchor='left', x=1, traceorder='normal', title_text='Stations', itemsizing='constant', itemclick='toggleothers', itemdoubleclick='toggle'),  # Move legend to the right and hide until clicked
+            xaxis_title=None,  # Remove x-axis label
+            yaxis_title=None   # Remove y-axis label
+        )
         st.plotly_chart(fig_daily)
 
-        st.write(f"The busiest {station_option.lower()}s account for the highest number of bike-sharing trips based on {station_option.lower()}.")
-
         # Create a line plot for hourly distribution
-        hourly_counts = filtered_data.groupby(['Hour_of_Day', station_option]).size().reset_index(name='Number of Bike-Sharing')
+        hourly_counts = top_station_data.groupby(['Hour_of_Day', station_option]).size().reset_index(name='Number of Bike-Sharing')
         fig_hourly = px.line(
             hourly_counts,
             x='Hour_of_Day',
             y='Number of Bike-Sharing',
             color=station_option,
-            title=f"Hourly Distribution of Bike-Sharing for Top {top_n} {station_option}s",
+            title=f"Hourly Distribution of Bike-Sharing for the Busiest {top_n} {station_option}s",
             labels={"Hour_of_Day": "Hour of Day", "Number of Bike-Sharing": "Count"},
-            markers=True
+            markers=True,
+            color_discrete_sequence=px.colors.qualitative.Pastel
         )
-        fig_hourly.update_xaxes(tickmode='linear')  # Ensure all x-axis labels are shown
-        fig_hourly.update_layout(hovermode='x unified')
-        fig_hourly.update_layout(dragmode='zoom')  # Allow zooming
+        fig_hourly.update_xaxes(tickmode='linear', range=[0, 23])  # Ensure all x-axis labels are shown and start from 0
+        fig_hourly.update_layout(
+            hovermode='x unified', 
+            dragmode='zoom', 
+            legend=dict(orientation='v', yanchor='top', y=1, xanchor='left', x=1, traceorder='normal', title_text='Stations', itemsizing='constant', itemclick='toggleothers', itemdoubleclick='toggle')  # Move legend to the right and hide until clicked
+        )
+        
         st.plotly_chart(fig_hourly)
-                    
-        # Interactive plot function using Plotly
-        def plot_time_distribution(data, title, color):
-            fig = px.histogram(
-            data, 
-            x='Day_of_Month', 
-            nbins=31, 
-            title=title, 
-            labels={'Day_of_Month': 'Day of Month', 'count': 'Number of Bike-Sharing Trips'}, 
-            color_discrete_sequence=[color],
-            opacity=0.7
-            )
 
-            # Update layout for better readability
-            fig.update_layout(
-            xaxis_title="Day of Month", 
-            yaxis_title="Percentage of Bike-Sharing Trips", 
-            hovermode="x unified",
-            xaxis_showgrid=False,
-            yaxis_showgrid=False,
-            plot_bgcolor='rgba(0,0,0,0)',  # Transparent background
-            paper_bgcolor='rgba(0,0,0,0)',  # Transparent paper background
-            font=dict(
-                family="Arial, sans-serif",
-                size=12,
-                color="black"
-            ),
-            title={
-                'text': title,
-                'y':0.9,
-                'x':0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'
-            }
-            )
+        # Optional interactive plot for Day-of-Month distribution
+        # def plot_day_of_month_distribution(data, station_option):
+        #     fig_day_of_month = px.histogram(
+        #         data,
+        #         x='Day_of_Month',
+        #         nbins=31,
+        #         title=f"Day-of-Month Distribution for the Busiest {top_n} {station_option}s",
+        #         labels={'Day_of_Month': 'Day of Month', 'count': 'Number of Bike-Sharing Trips'},
+        #         color_discrete_sequence=['green' if station_option == "Start station" else 'blue'],
+        #         opacity=0.7
+        #     )
+            
+        #     fig_day_of_month.update_layout(
+        #         hovermode="x unified",
+        #         xaxis_title="Day of Month",
+        #         yaxis_title="Number of Bike-Sharing Trips",
+        #         plot_bgcolor='rgba(0,0,0,0)',
+        #         paper_bgcolor='rgba(0,0,0,0)',
+        #         xaxis_showgrid=False,
+        #         yaxis_showgrid=False
+        #     )
+            
+        #     return fig_day_of_month
 
-            # Ensure all days of the month are shown on the x-axis
-            fig.update_xaxes(tickmode='linear', tick0=1, dtick=1)
-
-            return fig
-
-        # Filter data based on selected station type and top stations
-        filtered_data = top_station_data[top_station_data[station_option].isin(top_stations)]
-
-        # Plot the distribution for the selected top stations
-        fig = plot_time_distribution(filtered_data, f'Distribution of {station_option} Times for Top Stations', 'green' if station_option == "Start station" else 'blue')
-
-        # Display the interactive plot in Streamlit
-        st.plotly_chart(fig)
-
-        # Filter data based on selected station type and top stations
-        filtered_data = top_station_data[top_station_data[station_option].isin(top_stations)]
-
-        # Plot the distribution for the selected top stations
-        plot_time_distribution(filtered_data, f'Distribution of {station_option} Times for Top Stations', 'green' if station_option == "Start station" else 'blue')
+        # Display Day-of-Month Distribution plot (optional, can be toggled on demand)
+        # st.plotly_chart(plot_day_of_month_distribution(top_station_data, station_option))
 
         st.markdown("""
-        **Key Insights:**
+        **Messages:**
 
-        - **Day-of-Month Distribution**: Reveals how bike-sharing trips vary across different days of the month. Peaks can indicate specific high-traffic days.
-        - **Daily Distribution**: Highlights bike-sharing activity across the week, showing whether weekdays or weekends have higher demand.
-        - **Hourly Distribution**: Shows when trips are most frequent throughout the day. This helps pinpoint rush hours and quieter periods.
-        - **Day-of-Month Distribution**: Reveals how bike-sharing trips vary across different days of the month. Peaks can indicate specific high-traffic days.
-      
-        These plots provide insights into peak usage patterns, helping to identify the busiest stations and optimize bike availability across the city.
+        - **Daily Distribution**: Shows bike-sharing activity across the week for the busiest stations, helping predict peak demand.
+        - **Hourly Distribution**: Shows rush hours when bike-sharing spikes, useful for optimizing bike availability during peak times.
+        """)
+
+    if eda_option == "What do we know by now?":
+        st.subheader("What we know?")
+
+        st.markdown("""
+        - **Temporal Patterns**: Weekdays show clear peaks in bike-sharing during the morning and evening rush hours, with midweek seeing the highest activity. 
+        - **Weather Impact**: Favorable weather conditions, such as clear skies and mild temperatures, correlate with higher bike-sharing activity, while extreme conditions like rain or high humidity reduce usage.
+        - **Weather Regression Analysis**: Temperature shows a weak positive correlation with bike-sharing counts, while humidity has a weak negative correlation. Wind speed appears to have minimal effect on usage.
+                    """)
+
+        st.image('https://media.timeout.com/images/101651783/750/562/image.jpg', 
+                caption = 'Bike-sharing in front of the Tower Bridge, London',
+                width=700)
+
+        st.subheader("What Questions Could We Explore Next?")
+
+        st.markdown("""
+                - How can we **optimize station locations** and bike availability to better serve commercial and residential areas based on demand patterns?
+                - Would bike-sharing usage be more accurately predicted through **time series forecasting** or **clustering analysis** of stations and users?
+                - Could **station grouping** based on regions or routes help visualize cross-region commuter patterns using map-based tools?
+                - How do **combinations of weather variables** (temperature, humidity, wind speed) collectively impact bike usage, and could **clustering weather conditions** provide clearer insights?
+                - Is there a measurable **commuter effect** that can be confirmed through deeper analysis of weekday trips, peak times, and station locations?
+        """)
+
+        st.subheader("Next Steps")
+
+        st.markdown("""
+                - **Explore advanced forecasting** to predict bike-sharing demand during peak times and under varying weather conditions.
+                - **Use clustering techniques** to uncover hidden patterns in station usage and weather effects on bike-sharing.
+                - **Investigate commuter patterns** and identify routes with heavy traffic to optimize service for commuters.
         """)
