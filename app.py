@@ -22,7 +22,8 @@ st.title('London Bike-Sharing Trends')
 # Load bike-sharing data
 @st.cache_data
 def load_data():
-    bike_0 = pd.read_csv('1_LondonBikeJourneyAug2023.csv')
+    url ="https://drive.google.com/file/d/1ep0PdLOttWkDwdyfudiYhWUpcmR2FKgC/view?usp=drive_link"
+    bike_0 = pd.read_csv(url)
     return bike_0
 
 bike_0 = load_data()
