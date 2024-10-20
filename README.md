@@ -15,7 +15,7 @@ Users can explore trends and gain insights through interactive charts and graphs
 
 This repository includes all the materials I submitted for my midterm project, which was developed as part of the data science course.
 
-
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ### How to run it on your own machine
 
 1. Install the requirements
@@ -27,5 +27,5 @@ This repository includes all the materials I submitted for my midterm project, w
 2. Run the app
 
    ```
-   $ streamlit run streamlit_app.py
+   $ streamlit run app.py
    ```
