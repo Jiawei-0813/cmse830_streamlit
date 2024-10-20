@@ -1,8 +1,20 @@
-# 🎈 Blank app template
+## 🎈 CMSE 830 FS2024 - Midterm Project
+
+### Streamlit Application for EDA-IDA Processes
 
 A simple Streamlit app template for you to modify!
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+
+This project features a Streamlit application that visualizes two datasets:
+
+- **London Bike-Share Usage Dataset**: This dataset includes bicycle journeys from Transport for London (TfL) for August 2023.
+- **Open-Meteo Weather Data**: This data was obtained from the Open-Meteo API, providing weather information for the same period.
+
+Users can explore trends and gain insights through interactive charts and graphs. The main goal of the application is to help users better understand these datasets and make data-driven decisions based on the visualizations.
+
+This repository includes all the materials I submitted for my midterm project, which was developed as part of the data science course.
+
 
 ### How to run it on your own machine
 
