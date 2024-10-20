@@ -14,6 +14,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_squared_error
 
 st.title('London Bike-Sharing Trends')
 # st.subheader('CMSE 830 Midterm Project')
@@ -103,23 +106,23 @@ page = st.sidebar.radio('Go To',
 
 # Fun Fact
 total_trips = bike_0.shape[0]  # Total number of trips
-if st.sidebar.button("🤔 Do you know the number of bike-sharing trips that took place in London for August 2023?", key="fun_fact_button"):
+if st.sidebar.button("🤔 Guess how many bike-sharing trips happened in London in August 2023?", key="fun_fact_button"):
     st.sidebar.markdown(
         f"""
-        <div style='text-align: left; font-size: 18px;'>
+        <div style='text-align: center; font-size: 18px;'>
             <div style='color: #ADD8E6; font-size: 60px; text-align: center; font-style: italic;'>
                 {total_trips:,}
             </div> 
         </div>
         """, 
         unsafe_allow_html=True
-        )
+    )
 
     st.sidebar.markdown(
         """
         <div style='text-align: center; font-size: 24px;'>
-            <span style="background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet); -webkit-background-clip: text; color: transparent;">
-                It's a month packed with adventures!
+            <span style="background: linear-gradient(to right, #FF69B4, #FF1493); -webkit-background-clip: text; color: transparent;">
+                Wow! That's a lot of adventures on two wheels!
             </span>
         </div>
         """, 
@@ -139,7 +142,7 @@ st.markdown(
         padding: 10px 20px;
         margin: 10px 0;
         font-family: 'Pacifico', cursive;
-        text-align: left;
+        text-align: center;
     }
     div[data-testid="stSidebar"] button:hover {
         background-color: #FF1493;
@@ -1055,7 +1058,7 @@ elif page == 'Data Visualization':
 
         if st.button("Number of Bike-Sharing Trips by Weather Condition"):
 
-            # Group by the chosen weather condition (e.g., weather_code)
+            # Weather Condition - Number of Bike-Sharing Trips
             weather_counts = combined.groupby('Weather Description').size().reset_index(name='Number of Bike-Sharing')
 
             # Create a bar plot for the number of bike-sharing trips by weather condition
@@ -1072,16 +1075,19 @@ elif page == 'Data Visualization':
 
             st.markdown("""
             **Observation:**
-            - The bar plot shows the number of bike-sharing trips by weather condition.
             - **Clear Sky** and **Partly Cloudy** weather conditions have the highest number of bike-sharing trips.
             - **Thunderstorms** and **Heavy Snow** have the lowest number of bike-sharing trips.
             """)
 
         st.divider()
-        # Group and unstack to create a 2D matrix
+
+        # Heatmap - Average Bike-Sharing by Hour and Weather Condition
+        st.subheader("Average Bike-Sharing by Hour and Weather Condition")
+
+        # Group and unstack to create a 2D matrix for average bike-sharing by hour and weather condition
         avg_hour_weather = combined.groupby(['Hour_of_Day', 'Weather Description']).size().unstack(fill_value=0)
 
-        # Create a heatmap
+        # Heatmap showing bike-sharing by hour and weather condition
         fig_avg_hour_weather = px.imshow(
             avg_hour_weather,
             aspect="auto",
@@ -1090,39 +1096,124 @@ elif page == 'Data Visualization':
             color_continuous_scale='Blues',
             text_auto='.0f'  # Display annotations with 0 decimal places
         )
-        fig_avg_hour_weather.update_layout(
-            autosize=True
-        )
-
-        # Update layout for axis titles
-        fig_avg_hour_weather.update_layout(xaxis_title='Weather Condition', yaxis_title='Hour of Day')
         st.plotly_chart(fig_avg_hour_weather)
+
+        st.divider()
+
+        # Heatmap - Average Bike-Sharing by Day of Week and Weather Condition
+        st.subheader("Average Bike-Sharing by Day and Weather Condition")
 
         # Group and unstack to create a 2D matrix for average bike-sharing by day and weather condition
         avg_day_weather = combined.groupby(['Weather Description', 'Day_of_Week']).size().unstack(fill_value=0)
 
-        # Create a heatmap
+        # Heatmap for average bike-sharing by day and weather condition
         fig_avg_day_weather = px.imshow(
             avg_day_weather,
             aspect="auto",
             labels=dict(y="Weather Condition", x="Day of Week", color="Average Bike-Sharing"),
             title="Average Bike-Sharing by Day and Weather Condition",
             color_continuous_scale='Blues',
-            text_auto='.0f'  # Display annotations with 0 decimal places
+            text_auto='.0f'
         )
         fig_avg_day_weather.update_layout(
-            autosize=True
+            xaxis_title='Day of Week', 
+            yaxis_title='Weather Condition'
         )
-
-        # Update layout for axis titles
-        fig_avg_day_weather.update_layout(xaxis_title='Day of Week', yaxis_title='Weather Condition')
         st.plotly_chart(fig_avg_day_weather)
 
-        st.write("""
-        **Observation:**
-        - The heatmap shows the average number of bike-sharing by day and weather condition.
-        - **Clear Sky** and **Partly Cloudy** weather conditions have the highest average bike-sharing.""")
+        st.divider()
 
+        # Violin Plot - Distribution of Bike-Sharing by Weather Variables
+        st.subheader("Distribution of Bike-Sharing by Key Weather Variables")
+        
+        # Combine weather columns into long format using melt
+        long_format = pd.melt(combined, id_vars=[], value_vars=weather_cols, var_name='Weather_Variable', value_name='Value')
+
+        # Violin plot for weather variables
+        fig_weather_facet = px.violin(
+            long_format,
+            y='Value',
+            x='Weather_Variable',
+            box=True,  # Add box plot inside the violin
+            color='Weather_Variable',
+            color_discrete_sequence=px.colors.qualitative.Vivid
+        )
+
+        fig_weather_facet.update_layout(
+            title="Distribution of Bike-Sharing by Temperature and Humidity",
+            xaxis_title="Weather Variable",
+            yaxis_title="Value"
+        )
+
+        st.plotly_chart(fig_weather_facet)
+
+        st.divider()
+
+        # Linear Regression - Bike-Sharing vs. Temperature
+        st.subheader("Is Temperature the Most Significant Factor?")
+
+        # Prepare the dataset for regression
+        bike_weather_data = combined[['real_temperature_C', 'humidity_percentage', 'feels_like_temperature_C', 'wind_speed_10m']]
+
+        # Add a column for Bike-Sharing counts (each row = 1 bike-sharing event)
+        bike_weather_data['Bike-Sharing Count'] = 1
+
+        # Group by temperature
+        bike_weather_grouped = bike_weather_data.groupby('real_temperature_C').size().reset_index(name='Bike-Sharing Count')
+
+        # Prepare data for regression
+        X = bike_weather_grouped[['real_temperature_C']]  # Independent variable: Temperature
+        y = bike_weather_grouped['Bike-Sharing Count']  # Dependent variable: Bike-Sharing Count
+
+        # Split into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+        # Create and fit the linear regression model
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+
+        # Predict on the test set
+        y_pred = model.predict(X_test)
+
+        # Evaluate the model (R-squared, RMSE)
+        r2 = r2_score(y_test, y_pred)
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+
+        st.write(f"R-squared: {r2:.2f}")
+        st.write(f"RMSE: {rmse:.2f}")
+        # Plot the regression line and the data using Plotly
+        fig_regression = px.scatter(
+            x=X_test['real_temperature_C'], 
+            y=y_test, 
+            labels={'x': 'Temperature (C)', 'y': 'Bike-Sharing Count'},
+            title='Linear Regression: Bike-Sharing vs. Temperature'
+        )
+
+        # Add the regression line
+        fig_regression.add_trace(
+            go.Scatter(
+            x=X_test['real_temperature_C'], 
+            y=y_pred, 
+            mode='lines', 
+            name='Predicted Bike-Sharing Count',
+            line=dict(color='red')
+            )
+        )
+
+        # Update layout
+        fig_regression.update_layout(
+            xaxis_title='Temperature (C)',
+            yaxis_title='Bike-Sharing Count',
+            legend_title_text='Legend'
+        )
+
+        st.plotly_chart(fig_regression)
+
+        st.markdown("""
+        **Conclusion:**
+        - The linear regression analysis shows a positive relationship between temperature and bike-sharing counts.
+        - Higher temperatures tend to correlate with more bike-sharing trips, but other weather factors like humidity also need to be considered for a complete picture.
+        """)
 
     if eda_option == "Which stations are more popular?":
        
