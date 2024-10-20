@@ -2,8 +2,6 @@
 
 ### Streamlit Application for EDA-IDA Processes
 
-A simple Streamlit app template for you to modify!
-
 [Open in Streamlit](https://jiawei-0813-cmse830-streamlit-app-sy5uoy.streamlit.app/)
 
 This project features a Streamlit application that visualizes two datasets:
