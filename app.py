@@ -13,7 +13,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 
 st.title('London Bike-Sharing Trends')
 # st.subheader('CMSE 830 Midterm Project')
@@ -285,11 +285,11 @@ if page == 'Data Exploration':
 
                 with st.expander("🚴 Raw Data", expanded=True):
                     st.subheader('**🚴 Overview**')
-                    st.write(bike_0.head(10))  # Display first 10 rows
+                    st.dataframe(bike_0.head())  
                     
                     st.divider()
 
-                    col1, col2 = st.columns([1,1.5])
+                    col1, col2, col3 = st.columns([1,1.5, 1.5])
                     
                     with col1:
                         st.write(bike_0.dtypes.apply(lambda x: x.name).to_frame('Type').style.set_table_styles(
@@ -309,7 +309,15 @@ if page == 'Data Exploration':
                                     '% Missing': missing_percent
                                 })
                                 st.markdown(missing_summary.style.applymap(lambda x: 'color: red' if x > 0 else 'color: green').render(), unsafe_allow_html=True)
-                                    
+
+                        if st.checkbox("**Check Shape**", key="shape_bike"):
+                            st.write(f"The original dataset contains:")
+                            st.markdown(f"""
+                            - **{bike_0.shape[0]:,}** rows and **{bike_0.shape[1]}** columns
+                            - Both categorical and numerical features
+                            """)
+
+                    with col3:                
                         if st.checkbox("**Check Duplicate**", key="duplicate_bike"):
                                 num_duplicates = bike_0.duplicated().sum()
                                 if num_duplicates > 0:
@@ -319,13 +327,6 @@ if page == 'Data Exploration':
                                     st.markdown("<div style='color: #5F9EA0;'>- Duplicates have been removed.</div>", unsafe_allow_html=True)
                                 else:
                                     st.markdown("<div style='color: #5F9EA0;'>No duplicates found.</div>", unsafe_allow_html=True)
-
-                        if st.checkbox("**Check Shape**", key="shape_bike"):
-                            st.write(f"The original dataset contains:")
-                            st.markdown(f"""
-                            - **{bike_0.shape[0]:,}** rows and **{bike_0.shape[1]}** columns
-                            - Both categorical and numerical features
-                            """)
 
                         if st.checkbox("**Adjustment**", key="data_types_bike"):
                             st.write("Some columns are stored as objects (strings) and need to be adjusted:")
@@ -389,32 +390,36 @@ if page == 'Data Exploration':
                     st.write('**Encoding**')    
                     # Label encoding for bike model
                     if st.checkbox("**Label Encoding for Bike Model**"):
-                        st.write("Label encoding is ideal, since `Bike model` contains only two unique values")
+                        st.write("Since `Bike model` contains only two unique values, label encoding is appropriate.")
 
                         bike_model_counts = pd.Series({'CLASSIC': 716639, 'PBSC_EBIKE': 59888})
+                        bike_model_df = bike_model_counts.reset_index()
+                        bike_model_df.columns = ['Bike Model', 'Count']
+
 
                         # Pie chart for bike model distribution
-                        fig, ax = plt.subplots(figsize=(1.5, 1.5))
-                        labels = [f'{label} (N={count:,})' for label, count in zip(bike_model_counts.index, bike_model_counts)]
-                        
-                        wedges, texts, autotext = ax.pie(
-                            bike_model_counts, 
-                            autopct='%1.1f%%', 
-                            startangle=90, 
-                            labels=labels, 
-                            colors=['skyblue', 'orange'],
-                            textprops={'fontsize': 10, 'color': 'black'}
+                        fig_pie = px.pie(
+                            bike_model_df,
+                            names='Bike Model',
+                            values='Count',
+                            title='Bike Model Distribution',
+                            hole=0.5,
+                            color_discrete_sequence=px.colors.qualitative.Set3,
+                            hover_data=['Count'],  # Show count on hover
+                            color_discrete_map={'CLASSIC': '#1f77b4', 'PBSC_EBIKE': '#ff7f0e'}
                         )
-                        for text in texts + autotext:
-                            text.set_fontsize(10)
-                        ax.set_title('Bike Model Distribution', fontsize=12)
-                        st.pyplot(fig)
+                        fig_pie.update_layout(title={'text': 'Bike Model Distribution', 'x': 0.5, 'xanchor': 'center'})
+                        fig_pie.update_traces(textinfo='percent+label', textfont_size=12)
+                        fig_pie.update_layout(showlegend=False)
+                        st.plotly_chart(fig_pie)
 
                         # Apply label encoding
                         try:
                             le = LabelEncoder()
                             bike_1['Bike model_2'] = le.fit_transform(bike_1['Bike model'])
-                            st.write("Label encoding was applied successfully.")
+                            st.write("Label encoding was applied successfully [Classic = 0].")
+
+                            # st.write(bike_1[['Bike model', 'Bike model_2']].head().T)
                         except Exception as e:
                             st.error(f"Label encoding failed. Please check the bike model data. Error: {e}")
 
@@ -460,19 +465,18 @@ if page == 'Data Exploration':
 
                     st.divider ()
 
-                    st.write('**Transformation & Outlier**')
+                    st.write('**Transformation & Outlier Detection**')
                     # Check for outliers in 'Total duration (m)'
                     st.write(bike_1['Total duration (m)'].describe().to_frame().T)
                     
                     st.write('**Initial Observations:**')
                     st.write('- Some trips lasting over 124,000 minutes (more than 86 days).')
-                    st.write('- std is relatively high, indicating a wide range of trip durations.')
+                    st.write('- std is relatively high and much higher than the mean, indicating the data is widely spread out, with some trips having durations significantly longer than the average')
 
                     # Check for zero values
                     zero_count = (bike_1['Total duration (m)'] == 0).sum()
                     zero_percent = round((zero_count / len(bike_1)) * 100, 2)
-                    st.write(f"- There are {zero_count:,} ({zero_percent}%) trips with a duration of less than 1 minute (specifically those under 30 seconds).")
-                    st.write("These trips are likely errors or anomalies and should be removed.")
+                    st.write(f"- There are {zero_count:,} ({zero_percent}%) trips with a duration of less than 1 minute (specifically those under 30 seconds). These trips are likely errors or anomalies and should be removed.")
                     bike_1 = bike_1[bike_1['Total duration (m)'] > 0] # Remove trips with duration less than 1 minute
                     
                     # Copy the original dataset for further processing
@@ -501,47 +505,56 @@ if page == 'Data Exploration':
                     scaler = MinMaxScaler()
                     bike_3['Total duration (m)_s'] = scaler.fit_transform(bike_3[['Total duration (m)_log']])
 
-                    # Create subplots for 2x2 arrangement
-                    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-                    plt.subplots_adjust(hspace=0.4, wspace=0.4)
+                    # Create subplots for 2x2 arrangement using Plotly
+                    fig = make_subplots(rows=2, cols=2, subplot_titles=(
+                        'Original Total Duration (m)', 
+                        'Log Transformed Total Duration (m)', 
+                        'Log Total Duration (m) (Outliers Removed)', 
+                        'Scaled Total Duration (m)'
+                    ))
 
                     # Original Total Duration (m)
-                    sns.boxplot(x=bike_2['Total duration (m)'], color='skyblue', ax=axes[0, 0])
-                    axes[0, 0].set_title('Original Total Duration (m)')
-                    axes[0, 0].set_xlabel('Total Duration (m)')
+                    fig.add_trace(
+                        px.box(bike_2, x='Total duration (m)', color_discrete_sequence=['skyblue']).data[0],
+                        row=1, col=1
+                    )
 
                     # Log Transformed Total Duration (m)
-                    sns.boxplot(x=bike_2['Total duration (m)_log'], color='lightgreen', ax=axes[0, 1])
-                    axes[0, 1].set_title('Log Transformed Total Duration (m)')
-                    axes[0, 1].set_xlabel('Log Total Duration (m)')
+                    fig.add_trace(
+                        px.box(bike_2, x='Total duration (m)_log', color_discrete_sequence=['lightgreen']).data[0],
+                        row=1, col=2
+                    )
 
                     # Log Transformed Total Duration (m) with Outlier Removal
-                    sns.boxplot(x=bike_3['Total duration (m)_log'], color='lightblue', ax=axes[1, 0])
-                    axes[1, 0].set_title('Log Total Duration (m) (Outliers Removed)')
-                    axes[1, 0].set_xlabel('Log Total Duration (m)')
+                    fig.add_trace(
+                        px.box(bike_3, x='Total duration (m)_log', color_discrete_sequence=['lightblue']).data[0],
+                        row=2, col=1
+                    )
 
                     # Normalized Total Duration (m)
-                    sns.boxplot(x=bike_3['Total duration (m)_s'], color='lightcoral', ax=axes[1, 1])
-                    axes[1, 1].set_title('Scaled Total Duration (m)')
-                    axes[1, 1].set_xlabel('Scaled Total Duration (m)')
+                    fig.add_trace(
+                        px.box(bike_3, x='Total duration (m)_s', color_discrete_sequence=['lightcoral']).data[0],
+                        row=2, col=2
+                    )
 
-                    st.pyplot(fig)
+                    # Update layout
+                    fig.update_layout(height=800, width=1000, title_text="Total Duration Analysis")
+                    st.plotly_chart(fig)
 
-                    bike_3.drop(columns=['Total duration (m)', 'Total duration (m)_log'], inplace=True)
+                    bike_3.drop(columns=['Total duration (m)', 'Total duration (m)_s'], inplace=True)
 
                     # Summary of outliers removed
-                    st.write("""
-                    - Log transformation was applied to reduce skewness and stabilize variance for a more normal distribution.
-                    - MinMax scaling rescaled the log-transformed values to a [0, 1] range for better comparability with other continuous variables.
-                    - Outliers were detected using the IQR method and removed.
-                    - Yet, depends on the purpose of visualizations/analyses, the log-transformed and scaled values can be used.
-                    - {bike_0.shape[0] - bike_3.shape[0]:,} outliers were removed, leaving {bike_3.shape[0]:,} records.
+                    st.write(f"""
+                    - Log transformation was applied to reduce skewness and stabilize variance for a more normal distribution, though some extreme values remained.
+                    - Instead of purely relying on mathematical outlier removal, further exploration of these extreme values might offer valuable insights (e.g., unusually long rides, special events).
+                    - MinMax scaling was considered to rescale the log-transformed values to a [0, 1] range for better comparability with other continuous variables, but was not used in this case, as scaling is not essential for most EDA visualizations.
+                    - Depending on the purpose of visualizations/analyses, the log-transformed values (with or without outliers) will be used for further analysis.
+                    - {bike_2.shape[0] - bike_3.shape[0]:,} outliers were removed, leaving {bike_3.shape[0]:,} records.
                     """)
 
                 if st.button("Show Cleaned Bike Data Preview"):
                     st.write(bike_3.head())
                     
- 
             else:
                 st.error("Bike dataset is not loaded properly.")
         except FileNotFoundError:
@@ -554,13 +567,13 @@ if page == 'Data Exploration':
                 
                 st.subheader('🌤️ London Weather Dataset')
 
-                with st.expander("🌤️ Raw Dataset", expanded=False):
+                with st.expander("🌤️ Raw Dataset", expanded=True):
                     st.subheader('**🌤️ Overview**')
-                    st.write(weather_0.head(10))  # Display first 10 rows
+                    st.dataframe(weather_0.head())  
                                     
                     st.divider()
 
-                    col1, col2 = st.columns([1,1.5])
+                    col1, col2, col3 = st.columns([1,1.5, 1.5])
 
                     with col1:
                         st.write(weather_0.dtypes.apply(lambda x: x.name).to_frame('Type').style.set_table_styles(
@@ -569,8 +582,7 @@ if page == 'Data Exploration':
                         ).set_table_attributes('style="width: auto;"'))
 
                     with col2:
-                        st.write(f"The original dataset contains **{weather_0.shape[0]:,}** rows and **{weather_0.shape[1]}** columns, with both categorical and numerical features.")
-                    
+                       
                         if st.checkbox("**Check Missingness**", key="missing_weather"):
                             missing_values = weather_0.isnull().sum()
                             if missing_values.sum() == 0:
@@ -582,13 +594,6 @@ if page == 'Data Exploration':
                                     '% Missing': missing_percent
                                 })
                                 st.markdown(missing_summary.style.applymap(lambda x: 'color: red' if x > 0 else 'color: green').render(), unsafe_allow_html=True)
-                                
-                        if st.checkbox("**Check Shape**", key="shape_weather"):
-                            st.write(f"The original dataset contains:")
-                            st.markdown(f"""
-                            - **{weather_0.shape[0]:,}** rows and **{weather_0.shape[1]}** columns
-                            - All numerical features
-                            """)
 
                         if st.checkbox("**Check Duplicate**", key="duplicate_weather"):
                             num_duplicates = weather_0.duplicated().sum()
@@ -600,14 +605,23 @@ if page == 'Data Exploration':
                             else:
                                 st.markdown("<div style='color: #5F9EA0;'>No duplicates found.</div>", unsafe_allow_html=True)
 
+                    with col3:            
+                        if st.checkbox("**Check Shape**", key="shape_weather"):
+                            st.write(f"The original dataset contains:")
+                            st.markdown(f"""
+                            - **{weather_0.shape[0]:,}** rows and **{weather_0.shape[1]}** columns
+                            - All numerical features
+                            """)
+
                         if st.checkbox("**Adjust Data Types**", key="data_types_weather"):
                             st.markdown("""
-                            - **`date`**: Convert to `datetime` format and remove timezone information
+                            - **`date`**: Remove timezone information
                             - **`weather_code`**: Map to weather descriptions
                             - **`Date`** was extracted from `date` in `yyyy-mm-dd HH:MM` format for merging
                             """)
 
                 with st.expander("🌤️ Data Cleaning & Preprocessing", expanded=False):
+                    st.subheader('**Data Cleaning & Preprocessing**')
                     st.write("**Data Types after Conversion:**")
                     weather_1 = weather_0.copy()
 
@@ -650,14 +664,20 @@ if page == 'Data Exploration':
 
                     weather_1['Weather Description'] = weather_1['weather_code'].map(weather_code_mapping)
 
-                    # Plot the weather code distribution
-                    fig, ax = plt.subplots(figsize=(5, 5))
-                    sns.countplot(x=weather_1['Weather Description'], palette='viridis', ax=ax)
-                    ax.set_title('Weather Description Distribution')
-                    ax.set_xlabel('Weather Description')
-                    ax.set_ylabel('Count')
-                    plt.xticks(rotation=45, ha='right')
-                    st.pyplot(fig)
+                    # Count the occurrences of each weather description
+                    weather_counts = weather_1['Weather Description'].value_counts().reset_index() # Count the occurrences of each weather description
+                    weather_counts.columns = ['Weather Description', 'Count']
+
+                    # Create an interactive bar plot using Plotly
+                    fig = px.bar(
+                        weather_counts,
+                        x='Weather Description',
+                        y='Count',
+                        title='Weather Description Distribution',
+                        labels={'Weather Description': 'Weather Condition', 'Count': 'Number of Occurrences'},
+                        color='Count',
+                        color_continuous_scale='Viridis'
+                    )
 
                     # Check the changes
                     # st.write(weather_1[['date', 'Date', 'weather_code', 'Weather Description']].head())
@@ -667,21 +687,21 @@ if page == 'Data Exploration':
 
                     st.divider()
 
-                    st.write('**Transformation & Outlier**')
+                    st.write('**Transformation & Outlier Detection**')
                     
                     weather_2 = weather_1.copy()
 
                     numeric_columns = ['temperature_2m', 'apparent_temperature', 'wind_speed_10m', 'relative_humidity_2m']
                     st.write(weather_2[numeric_columns].describe().T. round(2))
 
-                    st.write(f"Outliers detected using the IQR method")
+                    st.write(f"Outliers detected using the IQR method: ")
                     for variable in numeric_columns:
                         if variable == 'relative_humidity_2m':
-                            st.write(f"'{variable}' are already in the reasonable range [0, 100].")
+                            st.write(f"`{variable}` are already in the reasonable range [0, 100].")
 
                         else:
                             weather_2 = detect_outliers_iqr(weather_2, variable)
-                            st.write(f"- '{variable}': {weather_0.shape[0] - weather_2.shape[0]:,} records removed.")
+                            st.write(f"- `{variable}`: {weather_0.shape[0] - weather_2.shape[0]:,} records removed.")
 
                     st.write('Min-Max Scaling was applied to normalize the data for better comparability.')
 
@@ -694,26 +714,33 @@ if page == 'Data Exploration':
                     
                     if variable:    
                         # Before Normalization
-                        fig, axes = plt.subplots(1, 2, figsize=(15, 5))
-                        sns.boxplot(x=weather_1[variable], color='lightblue', ax=axes[0])
-                        axes[0].set_title(f'{variable} Before Normalization')
-                        axes[0].set_xlabel(variable)
+                        fig_before = px.box(weather_1, x=variable, title=f'{variable} Before Normalization', color_discrete_sequence=['lightblue'])
+                        fig_before.update_layout(xaxis_title=variable, yaxis_title='Value')
 
                         # After Normalization
-                        sns.boxplot(x=weather_2[f'{variable}_n'], color='lightgreen', ax=axes[1])
-                        axes[1].set_title(f'{variable} After Normalization')
-                        axes[1].set_xlabel(f'{variable}_n')
+                        fig_after = px.box(weather_2, x=f'{variable}_n', title=f'{variable} After Normalization', color_discrete_sequence=['lightgreen'])
+                        fig_after.update_layout(xaxis_title=f'{variable}_n', yaxis_title='Value')
 
-                        st.pyplot(fig)
+                        # Combine the plots side-by-side
+                        fig_combined = make_subplots(rows=1, cols=2, subplot_titles=(f'{variable} Before Normalization', f'{variable} After Normalization'))
+
+                        fig_combined.add_trace(fig_before['data'][0], row=1, col=1)
+                        fig_combined.add_trace(fig_after['data'][0], row=1, col=2)
+
+                        fig_combined.update_layout(height=600, width=1200, showlegend=False)
+
+                        # Display the combined plot
+                        st.plotly_chart(fig_combined)
+
 
                     st.write('**Check Changes**')
-                    st.write(weather_2[[variable, f'{variable}_n']].describe().round(2))
+                    st.write(weather_2[[variable, f'{variable}_n']].describe().T. round(2))
                     
                     weather_2.drop(columns=numeric_columns, inplace=True)
-               
-                with st.expander("🌤️ Data Summary aftr Cleaning", expanded=True):
-                    st.write(weather_2.drop(columns=['weather_code', 'Date']).describe().T.round(2))
-
+                    
+            if st.button("Show Cleaned Weather Data Summary"):
+                st.write(weather_2.drop(columns=['weather_code', 'Date']).describe().T.round(2))
+                         
             else:
                 st.error("Weather dataset is not loaded properly.")
         except FileNotFoundError:
@@ -732,37 +759,61 @@ if page == 'Data Exploration':
                 #st.write(combined.head())
 
                 # Extract time variants from 'Date'
-                st.write("Generate Time-Related Features")
+                st.write("**Generate Time-Related Features**")
                 # Extract time variants from 'Date'
                 combined['Day_of_Month'] = combined['Date'].dt.day  # 1-31
                 combined['Day_of_Week'] = combined['Date'].dt.dayofweek + 1  # Monday=1, Sunday=7
                 combined['Hour_of_Day'] = combined['Date'].dt.hour  # 0-23
-                combined['is_Weekend'] = combined['Day_of_Week'].apply(lambda x: 1 if x > 5 else 0)  # 1=Weekend, 0=Weekday
-                # combined['Time_of_Day'] = combined['Hour_of_Day'].apply(
-                #    lambda x: 'Morning' if 5 <= x < 12 else 'Afternoon' if 12 <= x < 17 else 'Evening' if 17 <= x < 21 else 'Night'
-                #)
+                def is_weekend(day):
+                    return 1 if day > 5 else 0
+
+                combined['is_Weekend'] = combined['Day_of_Week'].apply(is_weekend)  # 1=Weekend, 0=Weekday
+
+                def categorize_time_of_day(hour):
+                    if 5 <= hour < 12:
+                        return 'Morning'
+                    elif 12 <= hour < 17:
+                        return 'Afternoon'
+                    elif 17 <= hour < 21:
+                        return 'Evening'
+                    else:
+                        return 'Night'
+
+                combined['Time_of_Day'] = combined['Hour_of_Day'].apply(categorize_time_of_day)
+
+                # Mapping for Day_of_Week to show day names
+                day_of_week_mapping = {1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Saturday", 7: "Sunday"}
+                combined['Day_of_Week_Name'] = combined['Day_of_Week'].map(day_of_week_mapping)
+
+                # Mapping for is_Weekend to show name
+                weekend_mapping = {0: "Weekday", 1: "Weekend"}
+                combined['is_Weekend_Name'] = combined['is_Weekend'].map(weekend_mapping)
 
                 # Check the changes
-                st.write(combined[['Date', 'Day_of_Month', 'Day_of_Week', 'Hour_of_Day', 'is_Weekend']].sample(5))
+                st.write(combined[['Date', 'Day_of_Month', 'Day_of_Week', 'Hour_of_Day', 'Time_of_Day', 'is_Weekend']].sample(5))
                
                 # Convert 'Total duration (m)' to categorical (maybe later)
 
                 # Renaming the specified columns
                 combined.rename(columns={
-                    "Total duration (m)_s": "Total_duration_min",
+                    "Total duration (m)_log": "Total_duration_min",
                     "temperature_2m_n": "real_temperature_C",
                     "apparent_temperature_n": "feels_like_temperature_C",
                     "wind_speed_10m_n": "wind_speed_10m",
                     "relative_humidity_2m_n": "humidity_percentage"
                 }, inplace=True)
 
-                if st.button ("Final Data View"):
-                    st.dataframe(combined)
-                
-                st.write("Summary Statistics")
-                numeric_columns = ['Total_duration_min', 'real_temperature_C', 'feels_like_temperature_C', 'wind_speed_10m', 'humidity_percentage']
-                st.write(combined[numeric_columns].describe().T.round(2))
-                st.write(combined.dtypes)
+                st.subheader('**Final Data View**')
+                st.dataframe(combined)
+               
+                if st.checkbox ("Summary Statistics"):
+                    numeric_columns = ['Total_duration_min', 'real_temperature_C', 'feels_like_temperature_C', 'wind_speed_10m', 'humidity_percentage']
+                    st.write(combined[numeric_columns].describe().T.round(2))
+                if st.checkbox ("Data Types"):
+                    st.write (combined.dtypes.apply(lambda x: x.name).to_frame('Type').style.set_table_styles(
+                            [{'selector': 'th', 'props': [('text-align', 'left')]},
+                            {'selector': 'td', 'props': [('text-align', 'left')]}]
+                        ).set_table_attributes('style="width: auto;"'))
 
                 # Save the combined dataset
                 combined.to_csv('datasets/3_london_bike_weather_2023.csv', index=False)
@@ -772,14 +823,16 @@ if page == 'Data Exploration':
 elif page == 'Data Visualization':
 
     def load_combined_data():
-        return pd.read_csv('3_london_bike_weather_2023.csv')
+        return pd.read_csv('datasets/3_london_bike_weather_2023.csv')
     
     combined = load_combined_data()
 
     # Define groups for visualization
     weather_cols = ['real_temperature_C', 'humidity_percentage', 'feels_like_temperature_C', 'wind_speed_10m']
-    time_cols = ['Day_of_Month', 'Day_of_Week', 'Hour_of_Day']
-    numeric_cols = weather_cols + time_cols + ['Total_duration_min']
+    time_cols = ['Day_of_Month', 'Day_of_Week', 'Hour_of_Day'] # numeric
+    numeric_cols = ['Total_duration_min', 'weather_code', 'real_temperature_C', 
+                'feels_like_temperature_C', 'wind_speed_10m', 'humidity_percentage', 
+                'Day_of_Month', 'Hour_of_Day']
 
     st.header('Data Visualization')
 
@@ -790,6 +843,7 @@ elif page == 'Data Visualization':
             "How do bike-sharing trends change over time?",
             "What impact does weather have on bike-sharing?",
             "Which stations are more popular?"
+            ""
         ]
     )
 
@@ -832,21 +886,22 @@ elif page == 'Data Visualization':
 
         st.markdown("""
         **Observation:**
-        - **Temperature** has the strongest correlation with bike-sharing.
-        - **Temperature** and **humidity** exhibit a negative correlation.
-        - **Time variables** show weak correlations.
-
-        Understanding the relationship between weather, especially temperature, and bike-sharing is crucial for predicting bike-sharing trends.
+        - **Temperature** shows a strong positive correlation with bike-sharing patterns.
+        - **Real Temperature** and **Humidity** exhibit a noticeable negative correlation, meaning that as humidity increases, temperature tends to decrease.
+        - **Time variables** like **Hour of Day** and **Day of Month** show weaker correlations with weather variables and bike-sharing.
+        
+        Understanding the relationship between weather, especially temperature and humidity, is key to predicting bike-sharing trends.
         """)
 
     if eda_option == "How do bike-sharing trends change over time?":
 
         time_variable = st.selectbox(
             "Select a type to visualize:",
-            ["Bike-Sharing Trends", "Weekend Effect", "Average by Hour and Day of Week"]
+            ["General Bike-Sharing Trends", "Effect of Time of Day on Bike-Sharing", 
+             "Weekday vs Weekend Bike-Sharing Patterns", "Bike-Sharing Patterns by Hour and Day of Week"]
         )
 
-        if time_variable == "Bike-Sharing Trends":
+        if time_variable == "General Bike-Sharing Trends":
             selected_time = st.radio(
                 "**Select a time variable for trends:**",
                 time_cols,
@@ -880,16 +935,44 @@ elif page == 'Data Visualization':
                 fig_time.update_layout(hovermode='x unified')
 
                 st.plotly_chart(fig_time)
-            
-        elif time_variable == "Weekend Effect":
-            # Hourly changes in bike-sharing trends (Weekday vs Weekend)
-            # Count rentals for weekends
-            weekend_counts = combined[combined['is_Weekend'] == 1].groupby('Hour_of_Day').size().reset_index(name='Number of Bike-Sharing')
-            weekend_counts['Type'] = 'Weekend'  # Add a column to indicate Weekend
 
-            # Count bike-sharing for weekdays
-            weekday_counts = combined[combined['is_Weekend'] == 0].groupby('Hour_of_Day').size().reset_index(name='Number of Bike-Sharing')
-            weekday_counts['Type'] = 'Weekday'  # Add a column to indicate Weekday
+        elif time_variable == "Effect of Time of Day on Bike-Sharing":
+            # Group by day of month and time of day
+            time_of_day_counts_by_day = combined.groupby(['Day_of_Month', 'Time_of_Day']).size().reset_index(name='Number of Bike-Sharing')
+
+            # Create a line plot with time of day as hue and day of month as x-axis
+            fig_time_of_day = px.line(
+                time_of_day_counts_by_day,
+                x='Day_of_Month',
+                y='Number of Bike-Sharing',
+                color='Time_of_Day',  # This will act as the hue
+                title="Bike-Sharing Trends by Day of Month and Time of Day",
+                labels={"Day_of_Month": "Day of Month", "Number of Bike-Sharing": "Count"},
+                markers=True,
+                category_orders={"Time_of_Day": ["Morning", "Afternoon", "Evening", "Night"]}  # Set hue order
+            )
+
+            fig_time_of_day.update_layout(
+                hovermode='x unified',  # Unify the hover information
+                xaxis=dict(tickmode='linear')  # Ensure all x-axis labels are shown
+            )
+            st.plotly_chart(fig_time_of_day)
+
+            st.write("""
+            **Observation:** The plot shows how bike-sharing activity varies throughout the month, segmented by different times of the day.
+            - Evening and Morning times see higher bike-sharing activity, suggesting that many bike users are commuters traveling to and from work.
+            - Afternoon shows a moderate level of activity, likely due to leisure or errand trips.
+            - Night has the lowest activity and fluctuates the least, indicating fewer bike-sharing trips during late hours and more consistent usage patterns at night.
+            """)
+        
+        elif time_variable == "Weekday vs Weekend Bike-Sharing Patterns":
+            # Create counts for weekends and add a new column for labeling
+            weekend_counts = combined[combined['is_Weekend_Name'] == 'Weekend'].groupby('Hour_of_Day').size().reset_index(name='Number of Bike-Sharing')
+            weekend_counts['is_Weekend_Name'] = 'Weekend'
+
+            # Create counts for weekdays and add a new column for labeling
+            weekday_counts = combined[combined['is_Weekend_Name'] == 'Weekday'].groupby('Hour_of_Day').size().reset_index(name='Number of Bike-Sharing')
+            weekday_counts['is_Weekend_Name'] = 'Weekday'
 
             # Combine both weekend and weekday counts
             combined_counts = pd.concat([weekend_counts, weekday_counts])
@@ -899,44 +982,43 @@ elif page == 'Data Visualization':
                 combined_counts,
                 x='Hour_of_Day',
                 y='Number of Bike-Sharing',
-                color='Type', 
+                color='is_Weekend_Name', 
                 title="Hourly Bike-Sharing: Weekday vs Weekend",
                 labels={"Hour_of_Day": "Hour of Day", "Number of Bike-Sharing": "Count"},
                 markers=True,
-                color_discrete_map={'Weekday': 'green', 'Weekend': 'lightgreen'}  # Use green shades for the lines
+                color_discrete_map={'Weekend': 'green', 'Weekday': 'lightgreen'}  # Use green shades for the lines
             )
 
+            # Update x-axis to show numbers in xx,xxx format
+            fig_hourly.update_layout(
+                xaxis=dict(
+                    tickformat=','
+                )
+            )
             fig_hourly.update_traces(mode='lines+markers', hovertemplate='N = %{y}')
             fig_hourly.update_layout(hovermode='x unified')
+            fig_hourly.update_xaxes(tickmode='linear')  # Ensure all x-axis labels are shown
             st.plotly_chart(fig_hourly)
 
             st.write("""
-            **Observation:**
-            - More bike-sharing occurs on **weekdays** than on **weekends**.
-            - **Weekdays** show a clear peak in bike-sharing during the morning and evening rush hours.
-            - **Weekends** have a more even distribution throughout the day, with a slight peak in the afternoon.
+                **Observation:**
+                - **Weekdays** see higher bike-sharing activity compared to **weekends**.
+                - On **weekdays**, there are clear peaks during the morning and evening rush hours.
+                - **Weekends** show a more consistent distribution of bike-sharing throughout the day, with a slight increase in the afternoon.
             """)
 
-        elif time_variable == "Average by Hour and Day of Week":
+        elif time_variable == "Bike-Sharing Patterns by Hour and Day of Week":            
+            # Define the correct order for days of the week
+            day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-            # Create a mapping dictionary
-            day_mapping = {
-                1: "Monday",
-                2: "Tuesday",
-                3: "Wednesday",
-                4: "Thursday",
-                5: "Friday",
-                6: "Saturday",
-                7: "Sunday"
-            }
+            # Ensure 'Day_of_Week_Name' is treated as a categorical variable with this order
+            combined['Day_of_Week_Name'] = pd.Categorical(combined['Day_of_Week_Name'], categories=day_order, ordered=True)
 
-            combined['Day_Name'] = combined['Day_of_Week'].map(day_mapping)
-            
             # Group and unstack to create a 2D matrix
-            avg_hour_day = combined.groupby(['Hour_of_Day', 'Day_Name']).size().unstack(fill_value=0)
+            avg_hour_day = combined.groupby(['Hour_of_Day', 'Day_of_Week_Name']).size().unstack(fill_value=0)
 
-            # Reorder the columns to ensure the days of the week are in the correct order
-            avg_hour_day = avg_hour_day[['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']]
+            # Reorder the columns to ensure the days of the week are in the correct order (optional, as pd.Categorical should handle this)
+            avg_hour_day = avg_hour_day.reindex(columns=day_order)
 
             # Create a heatmap
             fig_avg_hour_day = px.imshow(
@@ -947,20 +1029,26 @@ elif page == 'Data Visualization':
                 color_continuous_scale='YlGnBu',
                 text_auto='.0f'  # Display annotations with 0 decimal places
             )
+
+            # Ensure that x-axis follows the correct day order
             fig_avg_hour_day.update_layout(
-                autosize=True
+                xaxis_title='Day of Week', 
+                yaxis_title='Hour of Day',
+                xaxis_categoryorder='array',  # Ensure days of the week are displayed in correct order
+                xaxis_tickvals=[0, 1, 2, 3, 4, 5, 6],  # Tick values for the days
+                xaxis_ticktext=day_order,  # Text for the tick values
+                autosize=True,
+                yaxis=dict(tickmode='linear')  # Ensure all y-axis labels are shown
             )
 
-            # Update layout for axis titles
-            fig_avg_hour_day.update_layout(xaxis_title='Day of Week', yaxis_title='Hour of Day')
             st.plotly_chart(fig_avg_hour_day)
 
             st.markdown("""
-            **Observation:**
-            - The heatmap shows the average number of bike-sharing by hour and day of the week.
-            - **Peak bike-sharing** occurs on **weekdays**, especially in the **late afternoons (4 PM - 7 PM)**. This suggests that commuters likely use bikes after work.
-            - **Wednesdays and Thursdays** have the highest activity, while **Sundays** have the lowest.
-            """)
+            **Observation:** The heatmap visualizes the average number of bike-sharing trips by the hour of the day across each day of the week, showing **clear peak times for bike-sharing** across the week.
+            - **Weekdays**, particularly **Tuesday and Thursdays**, show the highest activity, with a notable spike in the **late afternoon (4 PM - 7 PM)**. This suggests that many bike users are commuters traveling after work.
+            - **Saturdays** consistently have the lowest activity.
+            - These patterns emphasize the influence of work schedules on bike-sharing trends, with significant usage concentrated during the weekday mornings and evenings.
+                        """)
 
     if eda_option == "What impact does weather have on bike-sharing?":
         
@@ -1048,7 +1136,7 @@ elif page == 'Data Visualization':
         top_n = st.slider("Select the number of top stations to display:", min_value=1, max_value=unique_stations, value=10, step=1)
 
         # Identify the top stations based on the selected station type
-        if station_option == "Start Station":
+        if station_option == "Start station":
             top_stations = combined['Start station'].value_counts().head(top_n).index
             top_station_data = combined[combined['Start station'].isin(top_stations)]
         else:
@@ -1062,7 +1150,7 @@ elif page == 'Data Visualization':
             y=station_option,             # Station names on the y-axis
             title=f"Top {top_n} {station_option}s",
             labels={station_option: f"{station_option} Name", "Number of Bike-Sharing": "Count"},
-            color=station_option,          # Color by station name
+            color=station_option          # Color by station name
         )
 
         # Hide the legend
@@ -1079,44 +1167,111 @@ elif page == 'Data Visualization':
         top_station_trips = top_station_data.shape[0]
         percentage = (top_station_trips / total_trips) * 100
 
-        st.write(f"These top {top_n} {station_option.lower()}s represent {percentage:.2f}% of the total bike-sharing trips.")
-        
-        if st.button("Show Top Stations"):
-            st.write(top_station_data.head())
-        
-        # Function to plot time distribution based on 'Day_of_Month'
-        def plot_time_distribution(data, title, color):
-            plt.figure(figsize=(10, 5))
-            sns.histplot(data['Day_of_Month'], kde=True, color=color, bins=31)
-            plt.title(title)
-            plt.xlabel('Day of Month')
-            plt.ylabel('Frequency')
-            st.pyplot(plt.gcf())  # Display the plot in Streamlit
+        st.write(f"These busiest {top_n} {station_option.lower()}s represent {percentage:.2f}% of the total bike-sharing trips.")
 
-        # Create figure for subplots
-        fig, axes = plt.subplots(2, 1, figsize=(20, 10))
+        #if st.button("Show Busiest Stations"):
+        #    st.write(top_station_data.head())
 
-        # Function to plot time distribution based on 'Day_of_Month'
+        st.subheader(f"The busiest {top_n} {station_option}s: Detailed Analysis")
+
+        # Create a bar plot for daily distribution
+        # Filter data based on selected station type and top stations
+        filtered_data = top_station_data[top_station_data[station_option].isin(top_stations)]
+
+        daily_counts = filtered_data.groupby(['Day_of_Week_Name', station_option]).size().reset_index(name='Number of Bike-Sharing')
+        fig_daily = px.bar(
+            daily_counts,
+            x='Day_of_Week_Name',
+            y='Number of Bike-Sharing',
+            color=station_option,
+            title=f"Daily Distribution of Bike-Sharing for Top {top_n} {station_option}s",
+            labels={"Day_of_Week_Name": "Day of Week", "Number of Bike-Sharing": "Count"},
+            barmode='group',
+            category_orders={"Day_of_Week_Name": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]}  # Ensure correct order
+        )
+        fig_daily.update_layout(dragmode='zoom')  # Allow zooming
+        st.plotly_chart(fig_daily)
+
+        st.write(f"The busiest {station_option.lower()}s account for the highest number of bike-sharing trips based on {station_option.lower()}.")
+
+        # Create a line plot for hourly distribution
+        hourly_counts = filtered_data.groupby(['Hour_of_Day', station_option]).size().reset_index(name='Number of Bike-Sharing')
+        fig_hourly = px.line(
+            hourly_counts,
+            x='Hour_of_Day',
+            y='Number of Bike-Sharing',
+            color=station_option,
+            title=f"Hourly Distribution of Bike-Sharing for Top {top_n} {station_option}s",
+            labels={"Hour_of_Day": "Hour of Day", "Number of Bike-Sharing": "Count"},
+            markers=True
+        )
+        fig_hourly.update_xaxes(tickmode='linear')  # Ensure all x-axis labels are shown
+        fig_hourly.update_layout(hovermode='x unified')
+        fig_hourly.update_layout(dragmode='zoom')  # Allow zooming
+        st.plotly_chart(fig_hourly)
+                    
+        # Interactive plot function using Plotly
         def plot_time_distribution(data, title, color):
-            plt.figure(figsize=(10, 5))
-            sns.histplot(data['Day_of_Month'], kde=True, color=color, bins=31)
-            plt.title(title)
-            plt.xlabel('Day of Month')
-            plt.ylabel('Frequency')
-            st.pyplot(plt.gcf())  # Display the plot in Streamlit
+            fig = px.histogram(
+            data, 
+            x='Day_of_Month', 
+            nbins=31, 
+            title=title, 
+            labels={'Day_of_Month': 'Day of Month', 'count': 'Number of Bike-Sharing Trips'}, 
+            color_discrete_sequence=[color],
+            opacity=0.7
+            )
+
+            # Update layout for better readability
+            fig.update_layout(
+            xaxis_title="Day of Month", 
+            yaxis_title="Percentage of Bike-Sharing Trips", 
+            hovermode="x unified",
+            xaxis_showgrid=False,
+            yaxis_showgrid=False,
+            plot_bgcolor='rgba(0,0,0,0)',  # Transparent background
+            paper_bgcolor='rgba(0,0,0,0)',  # Transparent paper background
+            font=dict(
+                family="Arial, sans-serif",
+                size=12,
+                color="black"
+            ),
+            title={
+                'text': title,
+                'y':0.9,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            }
+            )
+
+            # Ensure all days of the month are shown on the x-axis
+            fig.update_xaxes(tickmode='linear', tick0=1, dtick=1)
+
+            return fig
 
         # Filter data based on selected station type and top stations
         filtered_data = top_station_data[top_station_data[station_option].isin(top_stations)]
 
         # Plot the distribution for the selected top stations
-        plot_time_distribution(filtered_data, f'Distribution of {station_option} Times for Top Stations', 'green' if station_option == "Start Station" else 'red')
+        fig = plot_time_distribution(filtered_data, f'Distribution of {station_option} Times for Top Stations', 'green' if station_option == "Start station" else 'blue')
+
+        # Display the interactive plot in Streamlit
+        st.plotly_chart(fig)
+
+        # Filter data based on selected station type and top stations
+        filtered_data = top_station_data[top_station_data[station_option].isin(top_stations)]
+
+        # Plot the distribution for the selected top stations
+        plot_time_distribution(filtered_data, f'Distribution of {station_option} Times for Top Stations', 'green' if station_option == "Start station" else 'blue')
 
         st.markdown("""
-        **Observation:**
-        - Identifying the top stations reaveals popular bike-sharing locations.
-        - The time distribution of bike-sharing provides insights into peak hours and usage patterns.
-        - This information can help optimize bike availability and station capacity.
-        - Given the large number of unique stations, focusing on regional or cross-regional patterns may be more beneficial.
+        **Key Insights:**
+
+        - **Day-of-Month Distribution**: Reveals how bike-sharing trips vary across different days of the month. Peaks can indicate specific high-traffic days.
+        - **Daily Distribution**: Highlights bike-sharing activity across the week, showing whether weekdays or weekends have higher demand.
+        - **Hourly Distribution**: Shows when trips are most frequent throughout the day. This helps pinpoint rush hours and quieter periods.
+        - **Day-of-Month Distribution**: Reveals how bike-sharing trips vary across different days of the month. Peaks can indicate specific high-traffic days.
+      
+        These plots provide insights into peak usage patterns, helping to identify the busiest stations and optimize bike availability across the city.
         """)
-
-
