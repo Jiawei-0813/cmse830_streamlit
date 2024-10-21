@@ -1537,7 +1537,8 @@ elif page == 'Data Visualization':
                 - **Weather Impact**: Favorable weather conditions, such as clear skies and mild temperatures, correlate with higher bike-sharing activity, while extreme conditions like rain or high humidity reduce usage.
                 - **Weather Regression Analysis**: Temperature shows a weak positive correlation with bike-sharing counts, while humidity has a weak negative correlation. Wind speed appears to have minimal effect on usage.
                             """)
-
+        st.divider()
+        
         st.subheader("What Questions Could We Explore Next?")
 
         st.markdown("""
