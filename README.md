@@ -2,7 +2,7 @@
 
 ### Streamlit Visualization: London Bike-Sharing Insights
 
-[Open in Streamlit](https://cmse830app-na22wtmiduq5agkw9ci28s.streamlit.app/![image](https://github.com/user-attachments/assets/f5f3d1e7-f65e-4bd4-93d2-891988fac797)
+[[!Open in Streamlit](https://cmse830app-na22wtmiduq5agkw9ci28s.streamlit.app/)]
 
 Have you ever wondered what drives bike-sharing trends in a city? 
 
