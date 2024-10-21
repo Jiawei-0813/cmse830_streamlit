@@ -2,16 +2,18 @@
 
 ### Streamlit Visualization: London Bike-Sharing Insights
 
-[Open in Streamlit](https://jiawei-0813-cmse830-streamlit-app-sy5uoy.streamlit.app/)
+[Open in Streamlit](https://cmse830app-na22wtmiduq5agkw9ci28s.streamlit.app/![image](https://github.com/user-attachments/assets/f5f3d1e7-f65e-4bd4-93d2-891988fac797)
+
+Have you ever wondered what drives bike-sharing trends in a city? 
 
 This project presents a Streamlit application that visualizes and analyzes two publicly available datasets:
 
 - **London Bike-Share Usage Dataset**: This dataset contains bike-sharing trips recorded by Transport for London (TfL) during August 2023, including the start and end points of each trip, the bike used, and the duration of the ride.
 - **Open-Meteo Weather Data**: Weather data for the same period, sourced from the Open-Meteo API, detailing the start and end points of each trip, the bike used, and the duration of the ride.
 
-Through this Streamlit application, users can explore trends, clean data, and generate interactive visualizations that reveal patterns between weather conditions and factors affecting bike-sharing activities. 
+Through this Streamlit application, users can explore when people ride the most, which stations are the busiest, and how bike-sharing shifts across different times. Dive into how weather factors like temperature, humidity, and wind speed affect these patterns. Whether it’s rush hour or the weekend, uncover the hidden trends that shape urban mobility!
 
-This analysis lays the groundwork for more informed, data-driven decision-making in urban mobility and transportation planning. These datasets can also be leveraged in subsequent machine learning models to help city planners, researchers, and bike-sharing companies optimize operations and resource management.
+This analysis lays the groundwork for more informed, data-driven decision-making in urban mobility and transportation planning. These datasets can also be leveraged in subsequent machine-learning models to help city planners, researchers, and bike-sharing companies optimize operations and resource management.
 
 This repository includes all materials submitted for my midterm project, developed as part of a data science course.
 
