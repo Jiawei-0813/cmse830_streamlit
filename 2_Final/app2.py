@@ -26,7 +26,7 @@ st.title('London Bike-Sharing Trends')
 # Load bike-sharing data
 @st.cache_data
 def load_data():
-    bike_0 = pd.read_csv('1_Midterm/datasets/1_LondonBikeJourneyAug2023.csv')
+    bike_0 = pd.read_csv('0_LondonBikeJourneyAug2023_small.csv')
     return bike_0
 
 bike_0 = load_data()
@@ -91,7 +91,7 @@ def fetch_and_save_weather_data():
     weather_0 = pd.DataFrame(data = hourly_data)
 
     # Save as a CSV file
-    weather_0.to_csv('1_Midterm/datasets/2_london_weather_2023.csv', index=False)
+    weather_0.to_csv('0_london_weather_2023.csv', index=False)
     return weather_0
 
 weather_0 = fetch_and_save_weather_data()
@@ -824,14 +824,14 @@ if page == 'Data Exploration':
                             ).set_table_attributes('style="width: auto;"'))
 
                 # Save the combined dataset
-                combined.to_csv('1_Midterm/datasets/3_london_bike_weather_2023.csv', index=False)
+                combined.to_csv('1_london_bike_weather_2023.csv', index=False)
 
 # --- Data Visualization ---
 
 elif page == 'Data Visualization':
 
     def load_combined_data():
-        return pd.read_csv('1_Midterm/datasets/3_london_bike_weather_2023.csv')
+        return pd.read_csv('1_london_bike_weather_2023.csv')
     
     combined = load_combined_data()
 
