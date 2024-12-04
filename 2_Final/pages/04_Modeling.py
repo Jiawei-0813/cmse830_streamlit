@@ -14,11 +14,8 @@ st.set_page_config(
     layout="wide"
 )
 
-@st.cache_data
-def load_combined_data():
-    return pd.read_csv('1_london_bike_weather_2023.csv')
-
-combined = load_combined_data()
+if "combined_data" in st.session_state:
+    combined_data = st.session_state["combined_data"]
 
 # Sidebar for model selection
 st.sidebar.title("Modeling Options")

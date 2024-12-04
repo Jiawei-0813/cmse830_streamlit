@@ -13,10 +13,8 @@ st.set_page_config(
     layout="wide"
 )
 
-def load_combined_data():
-    return pd.read_csv('1_london_bike_weather_2023.csv')
-    
-combined = load_combined_data()
+if "combined_data" in st.session_state:
+    combined = st.session_state["combined_data"]
 
 # Define groups for visualization
 weather_cols = ['real_temperature_C', 'humidity_percentage', 'feels_like_temperature_C', 'wind_speed_10m']
