@@ -41,20 +41,23 @@ with col2:
             - **Station Hotspots**: Where do most rides start, and where do they end?
             """)
 
+# --- Initialize session state ---
+if "bike_data_raw" not in st.session_state:
+    st.session_state["bike_data_raw"] = None
+
+if "weather_data_raw" not in st.session_state:
+    st.session_state["weather_data_raw"] = None
+
+
 # --- Load Data ---
 # Load bike-sharing data
 @st.cache_data
 def load_bike_data():
-    try:
-        path = os.path.join(os.getcwd(), 'data/0_LondonBikeJourneyAug2023_small.csv')
-        print(f"Resolved bike data path: {path}")
-        if not os.path.exists(path):
-            raise FileNotFoundError(f"File not found at {path}")
-        bike_0 = pd.read_csv(path)
-        return bike_0
-    except Exception as e:
-        st.error(f"Error loading bike data: {e}")
+    path = "2_Final/data/0_LondonBikeJourneyAug2023_small.csv"
+    if not os.path.exists(path):
+        st.error(f"File not found: {path}")
         st.stop()
+    return pd.read_csv(path)
 
 @st.cache_data
 def fetch_and_save_weather_data():
@@ -116,7 +119,7 @@ def fetch_and_save_weather_data():
         weather_0 = pd.DataFrame(data = hourly_data)
 
         # Save as a CSV file
-        weather_0.to_csv('data/0_london_weather_2023.csv', index=False)
+        weather_0.to_csv('2_Final/data/0_london_weather_2023.csv', index=False)
         return weather_0
     except Exception as e:
         st.error(f"Error fetching weather data: {e}")
@@ -129,3 +132,4 @@ if "weather_data_raw" not in st.session_state:
     st.session_state["weather_data_raw"] = fetch_and_save_weather_data()
 
 st.write(st.session_state)
+st.write("Current working directory:", os.getcwd())

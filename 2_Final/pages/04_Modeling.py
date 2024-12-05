@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # Load the combined dataset
-if "combined_data" in st.session_state:
+if "combined_data" not in st.session_state:
     combined_data = st.session_state["combined_data"]
 
 # Sidebar Navigation

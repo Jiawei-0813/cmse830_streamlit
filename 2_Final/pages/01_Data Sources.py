@@ -17,7 +17,9 @@ with tab1:
     st.write('[Kaggle Dataset](https://www.kaggle.com/datasets/kalacheva/london-bike-share-usage-dataset)')  
     
     # Retrieve datasets from session_state
-    bike_0 = st.session_state["bike_data_raw"]
+    if "bike_data_raw" not in st.session_state:
+        st.session_state["bike_data_raw"] = None
+        bike_0 = st.session_state["bike_data_raw"]
 
     if st.checkbox("View raw bike data"):
         st.dataframe(bike_0.head())
@@ -108,7 +110,8 @@ with tab2:
     st.write('[Open-Meteo API Documentation](https://open-meteo.com/en/docs/historical-weather-api)') 
     
     # Ensure the datasets are available in session_state
-    if "weather_data_raw" in st.session_state:
+    if "weather_data_raw" not in st.session_state:
+        st.session_state["weather_data_raw"] = None
         # Retrieve datasets from session_state
         weather_0 = st.session_state["weather_data_raw"]
 
