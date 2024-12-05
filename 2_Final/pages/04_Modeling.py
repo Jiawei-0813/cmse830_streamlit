@@ -5,23 +5,25 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 import plotly.express as px
 import plotly.graph_objects as go
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+
 
 st.set_page_config(
     page_title="Modeling",
     layout="wide"
 )
 
+# Load the combined dataset
 if "combined_data" in st.session_state:
     combined_data = st.session_state["combined_data"]
 
-# Sidebar for model selection
-st.sidebar.title("Modeling Options")
-modeling_option = st.sidebar.radio(
+# Sidebar Navigation
+st.sidebar.title("Modeling Menu")
+page = st.sidebar.radio(
     "Choose a Section:",
-    ["Regression", "Ensemble Models", "Time Series Analysis"],
+    ["Introduction", "Regression Models", "Ensemble Models", "Time Series Analysis"],
     help="Select a predictive analysis techniques."
 )
 
@@ -31,6 +33,9 @@ test_size = st.sidebar.slider(
     min_value=0.1, max_value=0.5, value=0.3, step=0.05,
     help="Adjust the proportion of the test set."
 )
+
+# General Utility Functions
+
 
 # Predictor selection (common for all sections)
 st.sidebar.write("### Select Predictors and Target")
