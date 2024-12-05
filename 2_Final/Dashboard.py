@@ -128,8 +128,8 @@ def fetch_and_save_weather_data():
 # Store in session_state
 if "bike_data_raw" not in st.session_state:
     st.session_state["bike_data_raw"] = load_bike_data()
+    bike_0 = st.session_state["bike_data_raw"]
 if "weather_data_raw" not in st.session_state:
     st.session_state["weather_data_raw"] = fetch_and_save_weather_data()
 
 st.write(st.session_state)
-st.write("Current working directory:", os.getcwd())
