@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import streamlit as st
 import pandas as pd
 from data_loader import load_bike_data, load_weather_data
