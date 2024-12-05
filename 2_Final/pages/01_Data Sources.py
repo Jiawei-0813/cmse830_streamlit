@@ -12,16 +12,74 @@ tab1, tab2 = st.tabs(["🚴 Bike Dataset", "🌤️ Weather Dataset"])
 with tab1:
     st.subheader('🚴 London Bike-Sharing Dataset')
     st.write("""The bike dataset contains detailed records of individual bike trips from the Transport for London (TfL) bike-sharing system. """)
+    
     st.write('**Data Access**: ')
     st.write('[Kaggle Dataset](https://www.kaggle.com/datasets/kalacheva/london-bike-share-usage-dataset)')  
-    st.markdown("""
-            Due to limited storage and the LFS quota being 80% utilized previously, 
-            a random 10% of the original data was used for this demostration.
+    
+    # Ensure the datasets are available in session_state
+    if "bike_data_raw" in st.session_state:
+        # Retrieve datasets from session_state
+        bike_0 = st.session_state["bike_data_raw"]
+
+    if st.checkbox("View raw bike data"):
+        st.dataframe(bike_0.head())
+
+    with st.expander("Check Raw Bike Data"):
+        col1, col2 = st.columns([1, 1.5])
+        with col1:
+            st.write(bike_0.dtypes.apply(lambda x: x.name).to_frame('Type').style.set_table_styles(
+                [{'selector': 'th', 'props': [('text-align', 'left')]},
+                {'selector': 'td', 'props': [('text-align', 'left')]}]
+            ).set_table_attributes('style="width: auto;"'))
+
+        with col2: 
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                missing_values = bike_0.isnull().sum()
+                if missing_values.sum() == 0:
+                    st.markdown("<span style='color: #5F9EA0;'>No missing values found.</span>", unsafe_allow_html=True)
+                else:
+                    missing_percent = (missing_values / len(bike_0)) * 100
+                    missing_summary = bike_0.DataFrame({
+                    'Missing Values': missing_values,
+                    '% Missing': missing_percent
+                    })
+                    st.markdown(missing_summary.style.applymap(lambda x: 'color: red' if x > 0 else 'color: green').render(), unsafe_allow_html=True)
+            
+            with col2:
+                num_duplicates = bike_0.duplicated().sum()
+                if num_duplicates > 0:
+                    st.markdown(f"<div style='color: #5F9EA0;'>Number of duplicate rows: {num_duplicates}</div>", unsafe_allow_html=True)
+
+                    bike_cleaned = bike_0.drop_duplicates()
+                    st.markdown("<div style='color: #5F9EA0;'>- Duplicates have been removed.</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='color: #5F9EA0;'>No duplicates found.</div>", unsafe_allow_html=True)
+                    num_duplicates = bike_0.duplicated().sum()
+                    
+            st.write("**🛠 Suggested Adjustments**")
+            st.markdown("""
+            - **`Start date` and `End date`**: Convert to `datetime` format
+            - **`Total duration (ms)`**: Convert from milliseconds to minutes           
+            - **`Total duration`**: Redundant and dropped
+            - **`Bike model`**: Convert to `category` type 
             """)
+            st.write("Also,")
+            st.markdown("""
+            - Create a **`date`** column in `yyyy-mm-dd HH:MM` based on `Start date` for merging
+            - Check consistency between station names and station numbers
+            """)
+
+    with st.container():
+        st.markdown("""
+            **Note**: Due to limited storage and the LFS quota being 80% utilized previously, 
+            a random 10% of the original data was used for this demonstration.
+            """)
+    
     st.write("""
             - **Temporal**: Covers trips from August 1 to August 31, 2023
             - **Spatial**: Includes bike stations across London
-            - **Trips**: Records 776,527 individual rides
+            - **Trips**: Records 776,527 individual rides (10% with 77,653 trips in the demo)
             """)
     st.write('**Features**: ')
     st.write("""
@@ -37,7 +95,8 @@ with tab1:
         - **`Total duration`** (Ratio): Duration of the trip in seconds.  
         - **`Total duration (ms)`** (Ratio): Duration of the trip in milliseconds.  
         """, unsafe_allow_html=True)
-
+    
+       
 with tab2:
     st.subheader('🌤️ London Weather Dataset')
     st.write("""
@@ -46,8 +105,58 @@ with tab2:
                 provides easy access to high-resolution weather information, making it useful for analyzing how weather impacts activities 
                 like bike-sharing.
                 """)
-    st.write('**Data Access**:')
+    st.write('**Data Access**:')    
+    
     st.write('[Open-Meteo API Documentation](https://open-meteo.com/en/docs/historical-weather-api)') 
+    
+    # Ensure the datasets are available in session_state
+    if "weather_data_raw" in st.session_state:
+        # Retrieve datasets from session_state
+        weather_0 = st.session_state["weather_data_raw"]
+
+    if st.checkbox("View raw weather data"):
+        st.dataframe(weather_0.head())
+
+    with st.expander("Check Raw Weather Data"):
+            col1, col2 = st.columns([1, 1.5])
+            with col1:
+                st.write(weather_0.dtypes.apply(lambda x: x.name).to_frame('Type').style.set_table_styles(
+                        [{'selector': 'th', 'props': [('text-align', 'left')]},
+                        {'selector': 'td', 'props': [('text-align', 'left')]}]
+                    ).set_table_attributes('style="width: auto;"'))
+
+            with col2: 
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    missing_values = weather_0.isnull().sum()
+                    if missing_values.sum() == 0:
+                        st.markdown("<span style='color: #5F9EA0;'>No missing values found.</span>", unsafe_allow_html=True)
+                    else:
+                        missing_percent = (missing_values / len(weather_0)) * 100
+                        missing_summary = weather_0.DataFrame({
+                            'Missing Values': missing_values,
+                            '% Missing': missing_percent
+                        })
+                        st.markdown(missing_summary.style.applymap(lambda x: 'color: red' if x > 0 else 'color: green').render(), unsafe_allow_html=True)
+           
+                with col2:
+                    num_duplicates = weather_0.duplicated().sum()
+                    if num_duplicates > 0:
+                        st.markdown(f"<div style='color: #5F9EA0;'>Number of duplicate rows: {num_duplicates}</div>", unsafe_allow_html=True)
+
+                        weather_cleaned = weather_0.drop_duplicates()
+                        st.markdown("<div style='color: #5F9EA0;'>- Duplicates have been removed.</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown("<div style='color: #5F9EA0;'>No duplicates found.</div>", unsafe_allow_html=True)
+                        num_duplicates = weather_0.duplicated().sum()
+                            
+                st.write("**🛠 Suggested Adjustments**")
+                st.markdown("""
+                - **`date`**: Remove timezone information
+                - **`weather_code`**: Map to weather descriptions
+                - **`Date`** was extracted from `date` in `yyyy-mm-dd HH:MM` format for merging
+                """)
+
     st.write("""
         - **Temporal**: Hourly weather data from August 1 to August 31, 2023 
         - **Spatial**: Weather data for London, United Kingdom, at 51.5085° N, -0.1257° E
@@ -62,8 +171,9 @@ with tab2:
         - **`wind_direction_10m` (Circular Numeric)**: Wind direction at 10 meters above ground in degrees.  
         - **`weather_code` (Nominal)**: Weather condition represented by a numeric code.  
             """, unsafe_allow_html=True)
+    
     # Hide the weather code information initially
-    if st.button("Show Detailed Weather Code Info", key="weather_code_button"):
+    with st.expander("Show Detailed Weather Code Info"):
         st.image('https://github.com/Leftium/weather-sense/assets/381217/6b346c7d-0f10-4976-bb51-e0a8678990b3', use_container_width=True)
         st.write("""
         - **Code Description**:
@@ -82,6 +192,7 @@ with tab2:
         - **96, 99***: Thunderstorm with slight and heavy hail
         - (*) Thunderstorm forecast with hail is only available in Central Europe
         """, unsafe_allow_html=True)
+
     # Add custom CSS to change the sidebar button format
     st.markdown(
         """
@@ -107,3 +218,5 @@ with tab2:
         """,
         unsafe_allow_html=True
     )
+    
+    
