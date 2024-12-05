@@ -16,10 +16,8 @@ with tab1:
     st.write('**Data Access**: ')
     st.write('[Kaggle Dataset](https://www.kaggle.com/datasets/kalacheva/london-bike-share-usage-dataset)')  
     
-    # Ensure the datasets are available in session_state
-    if "bike_data_raw" in st.session_state:
-        # Retrieve datasets from session_state
-        bike_0 = st.session_state["bike_data_raw"]
+    # Retrieve datasets from session_state
+    bike_0 = st.session_state["bike_data_raw"]
 
     if st.checkbox("View raw bike data"):
         st.dataframe(bike_0.head())
