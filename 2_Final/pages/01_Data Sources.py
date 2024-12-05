@@ -48,10 +48,7 @@ with tab1:
     with st.expander("Check Raw Bike Data"):
         col1, col2 = st.columns([1, 1.5])
         with col1:
-            st.write(bike_0.dtypes.apply(lambda x: x.name).to_frame('Type').style.set_table_styles(
-                [{'selector': 'th', 'props': [('text-align', 'left')]},
-                {'selector': 'td', 'props': [('text-align', 'left')]}]
-            ).set_table_attributes('style="width: auto;"'))
+            st.write(bike_0.dtypes.to_frame('Type'))
 
         with col2: 
             col1, col2 = st.columns([1, 1])
