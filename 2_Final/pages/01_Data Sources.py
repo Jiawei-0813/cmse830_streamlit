@@ -1,9 +1,33 @@
 import streamlit as st
+import pandas as pd
+from data_loader import load_bike_data, load_weather_data
 
 st.set_page_config(
     page_title="Data Sources",
     layout="wide"
 )
+
+# Ensure data is loaded into session_state
+if "bike_data_raw" not in st.session_state:
+    try:
+        st.session_state["bike_data_raw"] = load_bike_data()
+    except FileNotFoundError as e:
+        st.error(f"Error loading bike data: {e}")
+        st.stop()
+
+if "weather_data_raw" not in st.session_state:
+    try:
+        st.session_state["weather_data_raw"] = load_weather_data()
+    except FileNotFoundError as e:
+        st.error(f"Error loading weather data: {e}")
+        st.stop()
+
+# Debug paths
+import os
+st.write("Current Working Directory:", os.getcwd())
+st.write("Does bike data exist?", os.path.exists("2_Final/data/0_LondonBikeJourneyAug2023_small.csv"))
+st.write("Does weather data exist?", os.path.exists("2_Final/data/0_london_weather_2023.csv"))
+
 
 st.title("Data Sources")
 
@@ -15,68 +39,57 @@ with tab1:
     
     st.write('**Data Access**: ')
     st.write('[Kaggle Dataset](https://www.kaggle.com/datasets/kalacheva/london-bike-share-usage-dataset)')  
-    
-   # Ensure bike_data_raw is in session_state
-    if "bike_data_raw" not in st.session_state or st.session_state["bike_data_raw"] is None:
-        try:
-            st.session_state["bike_data_raw"] = load_bike_data() 
-        except FileNotFoundError as e:
-            st.error(f"Error loading bike data: {e}")
-            st.stop()
-
-    # Retrieve dataset from session_state
+       
+    # Load the data
     bike_0 = st.session_state["bike_data_raw"]
-    
-    # Check if bike_0 is loaded
-    if bike_0 is not None:
-        if st.checkbox("View raw bike data"):
-            st.dataframe(bike_0.head())
+    if st.checkbox("View raw bike data"):
+        st.dataframe(bike_0.head())
 
-        with st.expander("Check Raw Bike Data"):
-            col1, col2 = st.columns([1, 1.5])
+    with st.expander("Check Raw Bike Data"):
+        col1, col2 = st.columns([1, 1.5])
+        with col1:
+            st.write(bike_0.dtypes.apply(lambda x: x.name).to_frame('Type').style.set_table_styles(
+                [{'selector': 'th', 'props': [('text-align', 'left')]},
+                {'selector': 'td', 'props': [('text-align', 'left')]}]
+            ).set_table_attributes('style="width: auto;"'))
+
+        with col2: 
+            col1, col2 = st.columns([1, 1])
             with col1:
-                st.write(bike_0.dtypes.apply(lambda x: x.name).to_frame('Type').style.set_table_styles(
-                    [{'selector': 'th', 'props': [('text-align', 'left')]},
-                    {'selector': 'td', 'props': [('text-align', 'left')]}]
-                ).set_table_attributes('style="width: auto;"'))
+                missing_values = bike_0.isnull().sum()
+                if missing_values.sum() == 0:
+                    st.markdown("<span style='color: #5F9EA0;'>No missing values found.</span>", unsafe_allow_html=True)
+                else:
+                    missing_percent = (missing_values / len(bike_0)) * 100
+                    missing_summary = pd.DataFrame({
+                    'Missing Values': missing_values,
+                    '% Missing': missing_percent
+                    })
+                    st.markdown(missing_summary.style.applymap(lambda x: 'color: red' if x > 0 else 'color: green').render(), unsafe_allow_html=True)
+            
+            with col2:
+                num_duplicates = bike_0.duplicated().sum()
+                if num_duplicates > 0:
+                    st.markdown(f"<div style='color: #5F9EA0;'>Number of duplicate rows: {num_duplicates}</div>", unsafe_allow_html=True)
 
-            with col2: 
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    missing_values = bike_0.isnull().sum()
-                    if missing_values.sum() == 0:
-                        st.markdown("<span style='color: #5F9EA0;'>No missing values found.</span>", unsafe_allow_html=True)
-                    else:
-                        missing_percent = (missing_values / len(bike_0)) * 100
-                        missing_summary = bike_0.DataFrame({
-                        'Missing Values': missing_values,
-                        '% Missing': missing_percent
-                        })
-                        st.markdown(missing_summary.style.applymap(lambda x: 'color: red' if x > 0 else 'color: green').render(), unsafe_allow_html=True)
-                
-                with col2:
+                    bike_cleaned = bike_0.drop_duplicates()
+                    st.markdown("<div style='color: #5F9EA0;'>- Duplicates have been removed.</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='color: #5F9EA0;'>No duplicates found.</div>", unsafe_allow_html=True)
                     num_duplicates = bike_0.duplicated().sum()
-                    if num_duplicates > 0:
-                        st.markdown(f"<div style='color: #5F9EA0;'>Number of duplicate rows: {num_duplicates}</div>", unsafe_allow_html=True)
-
-                        bike_cleaned = bike_0.drop_duplicates()
-                        st.markdown("<div style='color: #5F9EA0;'>- Duplicates have been removed.</div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown("<div style='color: #5F9EA0;'>No duplicates found.</div>", unsafe_allow_html=True)
-                        num_duplicates = bike_0.duplicated().sum()
-                        
-                st.write("**🛠 Suggested Adjustments**")
-                st.markdown("""
-                - **`Start date` and `End date`**: Convert to `datetime` format
-                - **`Total duration (ms)`**: Convert from milliseconds to minutes           
-                - **`Total duration`**: Redundant and dropped
-                - **`Bike model`**: Convert to `category` type 
-                """)
-                st.write("Also,")
-                st.markdown("""
-                - Create a **`date`** column in `yyyy-mm-dd HH:MM` based on `Start date` for merging
-                - Check consistency between station names and station numbers
-                """)
+                    
+            st.write("**🛠 Suggested Adjustments**")
+            st.markdown("""
+            - **`Start date` and `End date`**: Convert to `datetime` format
+            - **`Total duration (ms)`**: Convert from milliseconds to minutes           
+            - **`Total duration`**: Redundant and dropped
+            - **`Bike model`**: Convert to `category` type 
+            """)
+            st.write("Also,")
+            st.markdown("""
+            - Create a **`date`** column in `yyyy-mm-dd HH:MM` based on `Start date` for merging
+            - Check consistency between station names and station numbers
+            """)
 
     with st.container():
         st.markdown("""
@@ -116,12 +129,8 @@ with tab2:
     st.write('**Data Access**:')    
     
     st.write('[Open-Meteo API Documentation](https://open-meteo.com/en/docs/historical-weather-api)') 
-    
-    # Ensure the datasets are available in session_state
-    if "weather_data_raw" not in st.session_state:
-        st.session_state["weather_data_raw"] = None
-        # Retrieve datasets from session_state
-        weather_0 = st.session_state["weather_data_raw"]
+
+    weather_0 = st.session_state["weather_data_raw"]
 
     if st.checkbox("View raw weather data"):
         st.dataframe(weather_0.head())
