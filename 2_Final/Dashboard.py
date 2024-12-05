@@ -45,9 +45,16 @@ with col2:
 # Load bike-sharing data
 @st.cache_data
 def load_bike_data():
-    path = os.path.join(os.getcwd(), 'data/0_LondonBikeJourneyAug2023_small.csv')
-    bike_0 = pd.read_csv(path)
-    return bike_0
+    try:
+        path = os.path.join(os.getcwd(), 'data/0_LondonBikeJourneyAug2023_small.csv')
+        print(f"Resolved bike data path: {path}")
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"File not found at {path}")
+        bike_0 = pd.read_csv(path)
+        return bike_0
+    except Exception as e:
+        st.error(f"Error loading bike data: {e}")
+        st.stop()
 
 @st.cache_data
 def fetch_and_save_weather_data():
@@ -120,3 +127,5 @@ if "bike_data_raw" not in st.session_state:
     st.session_state["bike_data_raw"] = load_bike_data()
 if "weather_data_raw" not in st.session_state:
     st.session_state["weather_data_raw"] = fetch_and_save_weather_data()
+
+st.write(st.session_state)
