@@ -1,5 +1,4 @@
-import os
-import pandas as pd
+#!/usr/bin/env python
 import streamlit as st
 
 # Set up the main structure
