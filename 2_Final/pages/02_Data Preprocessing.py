@@ -12,6 +12,23 @@ st.set_page_config(
     layout="wide"
 )
 
+from data_loader import load_bike_data, load_weather_data
+# Ensure the data is loaded into session_state
+if "bike_data_raw" not in st.session_state:
+    try:
+        st.session_state["bike_data_raw"] = load_bike_data()
+    except FileNotFoundError as e:
+        st.error(f"Error loading bike data: {e}")
+        st.stop()
+
+if "weather_data_raw" not in st.session_state:
+    try:
+        st.session_state["weather_data_raw"] = load_weather_data()
+    except FileNotFoundError as e:
+        st.error(f"Error loading weather data: {e}")
+        st.stop()
+
+
 st.header('Data Exploration')
 
 # Create tabs for datasets

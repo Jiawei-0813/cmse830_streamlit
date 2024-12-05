@@ -1,19 +1,17 @@
 import streamlit as st
 import pandas as pd
-from data_loader import load_bike_data, load_weather_data
 
 st.set_page_config(
     page_title="Data Sources",
     layout="wide"
 )
 
+from data_loader import load_bike_data, load_weather_data
+
 # Ensure data is loaded into session_state
 if "bike_data_raw" not in st.session_state:
-    try:
-        st.session_state["bike_data_raw"] = load_bike_data()
-    except FileNotFoundError as e:
-        st.error(f"Error loading bike data: {e}")
-        st.stop()
+    st.session_state["bike_data_raw"] = load_bike_data()
+
 
 if "weather_data_raw" not in st.session_state:
     try:

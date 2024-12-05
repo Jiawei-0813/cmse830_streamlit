@@ -7,7 +7,6 @@ st.set_page_config(
 
 st.subheader("What do we know?")
 
-st.image('https://media.timeout.com/images/101651783/750/562/image.jpg')
 st.markdown("""
     - **Temporal Patterns**: Weekdays show clear peaks in bike-sharing during the morning and evening rush hours, with midweek seeing the highest activity. 
     - **Weather Impact**: Favorable weather conditions, such as clear skies and mild temperatures, correlate with higher bike-sharing activity, while extreme conditions like rain or high humidity reduce usage.
@@ -15,3 +14,7 @@ st.markdown("""
 """)
 st.divider()
 
+st.subheader("MORE IS COMING SOON!")
+
+
+st.image('https://media.timeout.com/images/101651783/750/562/image.jpg')
