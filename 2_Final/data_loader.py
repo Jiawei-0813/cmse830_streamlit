@@ -19,4 +19,3 @@ def load_weather_data():
         st.error(f"File not found: {path}")
         st.stop()
     return pd.read_csv(path)
-
