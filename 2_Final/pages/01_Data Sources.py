@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 
 st.set_page_config(
     page_title="Data Sources",
@@ -7,11 +6,15 @@ st.set_page_config(
 )
 
 from data_loader import load_bike_data, load_weather_data
+import pandas as pd
 
 # Ensure data is loaded into session_state
 if "bike_data_raw" not in st.session_state:
-    st.session_state["bike_data_raw"] = load_bike_data()
-
+    try:
+        st.session_state["bike_data_raw"] = load_bike_data()
+    except FileNotFoundError as e:
+        st.error(f"Error loading bike data: {e}")
+        st.stop()
 
 if "weather_data_raw" not in st.session_state:
     try:
@@ -20,15 +23,9 @@ if "weather_data_raw" not in st.session_state:
         st.error(f"Error loading weather data: {e}")
         st.stop()
 
-# Debug paths
-import os
-st.write("Current Working Directory:", os.getcwd())
-st.write("Does bike data exist?", os.path.exists("2_Final/data/0_LondonBikeJourneyAug2023_small.csv"))
-st.write("Does weather data exist?", os.path.exists("2_Final/data/0_london_weather_2023.csv"))
-
-
 st.title("Data Sources")
 
+# Add tabs for the two datasets
 tab1, tab2 = st.tabs(["🚴 Bike Dataset", "🌤️ Weather Dataset"])
 
 with tab1:
